@@ -20,6 +20,11 @@ div.grid {
   top: 0px;
 }
 
+ul, ol, dl {
+  list-style-position: inside;  
+  list-style-type: square;
+}
+
 @media only screen and (max-width: 940px) {
 
   .top-bar ul {
