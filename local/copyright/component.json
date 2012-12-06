@@ -1,0 +1,14 @@
+{
+  "name": "navbar",
+  "description": "Navigation bar Component",
+  "dependencies": {
+    "timoxley/backbone-view": "*"
+  },
+  "scripts": [
+    "index.js",
+    "template.js"
+  ],
+  "styles": [
+    "style.css"
+  ]
+}
