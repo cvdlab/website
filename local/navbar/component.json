@@ -2,7 +2,9 @@
   "name": "navbar",
   "description": "Navigation bar Component",
   "dependencies": {
-    "timoxley/backbone-view": "*"
+    "timoxley/backbone-view": "*",
+    "component/jquery": "*",
+    "component/domify": "*"
   },
   "scripts": [
     "index.js",
@@ -10,5 +12,7 @@
   ],
   "styles": [
     "style.css"
-  ]
+  ],
+  "local": ["foundation"],
+  "paths": ["local"]
 }

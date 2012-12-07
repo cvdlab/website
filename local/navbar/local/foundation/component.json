@@ -1,0 +1,8 @@
+{
+  "name": "foundation",
+  "description": "Zurb Foundation CSS framework",
+  "scripts": [],
+  "styles": [
+    "style.css"
+  ]
+}
