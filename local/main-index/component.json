@@ -1,0 +1,14 @@
+{
+  "name": "main-index",
+  "description": "Home component",
+  "dependencies": {
+    "component/jquery": "*"
+  },
+  "scripts": [
+    "index.js",
+    "template.js"
+  ],
+  "styles": [
+    "style.css"
+  ]
+}
