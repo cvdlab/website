@@ -14,8 +14,12 @@
 
 
 var Navbar = require('navbar');
-
-debugger;
+var Hero = require('hero');
 var navbar = new Navbar();
-
+var hero = new Hero();
 document.body.appendChild(navbar.el);
+document.body.appendChild(hero.el);
+hero.render({
+  title: 'CVDLAB', 
+  subtitle: 'Computational Visual Design Lab'
+});

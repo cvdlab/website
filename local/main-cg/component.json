@@ -1,9 +1,8 @@
 {
-  "name": "hero",
-  "description": "Hero component",
+  "name": "main-cg",
+  "description": "Computational Graphics course component",
   "dependencies": {
-    "component/domify": "*",
-    "timoxley/backbone-view": "*"
+    "component/jquery": "*"
   },
   "scripts": [
     "index.js",

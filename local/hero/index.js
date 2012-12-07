@@ -11,8 +11,8 @@ module.exports = View.extend({
 
   render: function (options) {
     var options = options || {};
-    var title = options.title || '';
-    var subtitle = options.subtitle || '';
+    var title = options.title || 'title';
+    var subtitle = options.subtitle || 'subtitle';
     var el = this.$el;
     el.find('h1').text(title);
     el.find('h2').text(subtitle);
