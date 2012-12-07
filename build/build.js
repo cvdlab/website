@@ -11279,25 +11279,13 @@ require.register("main/template.js", function(module, exports, require){
 module.exports = '';
 });
 require.register("copyright/index.js", function(module, exports, require){
-var View = require('backbone-view');
+var $ = require('jquery');
 var template = require('./template');
 
-module.exports = View.extend({
-
-  initialize: function (options) {
-    return this;
-  },
-
-  render: function () {
-    return this;
-  },
-
-  events: {}
-
-});
+module.exports = $(template);
 });
 require.register("copyright/template.js", function(module, exports, require){
-module.exports = '';
+module.exports = '<footer class="row">\n  <div class="twelve columns">\n    <hr />\n    <p>Copyright &copy; 2012 Enrico Marino and Federico Spini</p>\n  </div>\n</footer>';
 });
 require.register("app/index.js", function(module, exports, require){
 // var $ = require('jquery');
@@ -11366,10 +11354,4 @@ require.alias("component-object/index.js", "timoxley-backbone-events/deps/object
 
 require.alias("copyright/index.js", "app/deps/copyright/index.js");
 require.alias("copyright/template.js", "app/deps/copyright/template.js");
-require.alias("timoxley-backbone-view/index.js", "copyright/deps/backbone-view/index.js");
-require.alias("component-underscore/index.js", "timoxley-backbone-view/deps/underscore/index.js");
-
-require.alias("component-jquery/index.js", "timoxley-backbone-view/deps/jquery/index.js");
-
-require.alias("timoxley-backbone-events/index.js", "timoxley-backbone-view/deps/backbone-events/index.js");
-require.alias("component-object/index.js", "timoxley-backbone-events/deps/object/index.js");
+require.alias("component-jquery/index.js", "copyright/deps/jquery/index.js");
