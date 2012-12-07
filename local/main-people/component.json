@@ -1,6 +1,6 @@
 {
   "name": "main-people",
-  "description": "People component",
+  "description": "People info component",
   "dependencies": {
     "component/jquery": "*"
   },

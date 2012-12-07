@@ -1,6 +1,6 @@
 {
   "name": "main-about",
-  "description": "About component",
+  "description": "About info component",
   "dependencies": {
     "component/jquery": "*"
   },
