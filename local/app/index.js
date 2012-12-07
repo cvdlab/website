@@ -34,8 +34,6 @@ module.exports = Router.extend({
     anchors.hero.after(hero.el);
     anchors.copiright.after(copiright.el);
 
-
-
     this.views = views;
     this.anchors = anchors;
     this.history = Router.history;
@@ -120,5 +118,4 @@ module.exports = Router.extend({
 
       this.render(main_page, hero_model);
     }
-
 });

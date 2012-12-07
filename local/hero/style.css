@@ -1,0 +1,13 @@
+div.hero {
+  width: 100%;
+  height: 300px;
+  border: 1px;
+}
+
+div.hero h1 {
+  font-size: 24px;
+}
+
+div.hero h2 {
+  font-size: 18px;
+}

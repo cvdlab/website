@@ -11189,8 +11189,6 @@ var domify = require('domify');
 var View = require('backbone-view');
 var template = require('./template');
 
-console.log('NAVBAR!');
-
 module.exports = View.extend({
 
   initialize: function (options) {
@@ -11231,16 +11229,24 @@ require.register("navbar/template.js", function(module, exports, require){
 module.exports = '<nav class="top-bar fixed">\n  <div class="row">\n    <ul>\n      <li class="name"><a href="#/">CVDLAB</a></li>\n      <li class="toggle-topbar"><a href="#"></a></li>\n    </ul>\n\n    <ul class="right">\n      <li><a href="#/about">About</a></li>\n      <li><a href="#/people">People</a></li>\n      <li class="has-dropdown">\n        <a href="#">Teaching</a>\n        <ul class="dropdown">\n          <li><a href="#/teaching/computational-graphics">Computational Graphics</a></li>\n          <li><a href="#/teaching/biomedical-informatics">Biomedical Informatic</a></li>\n        </ul>\n      </li>\n      <li><a href="#/projects">Projects</a></li>\n    </ul>\n  </div>\n</nav>\n';
 });
 require.register("hero/index.js", function(module, exports, require){
+var domify = require('domify');
 var View = require('backbone-view');
 var template = require('./template');
 
 module.exports = View.extend({
 
   initialize: function (options) {
+    this.setElement(domify(template));
     return this;
   },
 
-  render: function () {
+  render: function (options) {
+    var options = options || {};
+    var title = options.title || 'title';
+    var subtitle = options.subtitle || 'subtitle';
+    var el = this.$el;
+    el.find('h1').text(title);
+    el.find('h2').text(subtitle);
     return this;
   },
 
@@ -11249,7 +11255,7 @@ module.exports = View.extend({
 });
 });
 require.register("hero/template.js", function(module, exports, require){
-module.exports = '';
+module.exports = '<div class="grid">\n  <hgroup>\n    <h1></h1>\n    <h2></h2>\n  </hgroup>\n</div>';
 });
 require.register("main/index.js", function(module, exports, require){
 var View = require('backbone-view');
@@ -11310,11 +11316,15 @@ require.register("app/index.js", function(module, exports, require){
 
 
 var Navbar = require('navbar');
-
-debugger;
+var Hero = require('hero');
 var navbar = new Navbar();
-
+var hero = new Hero();
 document.body.appendChild(navbar.el);
+document.body.appendChild(hero.el);
+hero.render({
+  title: 'CVDLAB', 
+  subtitle: 'Computational Visual Design Lab'
+});
 });
 require.alias("app/index.js", "CVDLAB/deps/app/index.js");
 require.alias("navbar/index.js", "app/deps/navbar/index.js");
@@ -11334,6 +11344,8 @@ require.alias("component-domify/index.js", "navbar/deps/domify/index.js");
 
 require.alias("hero/index.js", "app/deps/hero/index.js");
 require.alias("hero/template.js", "app/deps/hero/template.js");
+require.alias("component-domify/index.js", "hero/deps/domify/index.js");
+
 require.alias("timoxley-backbone-view/index.js", "hero/deps/backbone-view/index.js");
 require.alias("component-underscore/index.js", "timoxley-backbone-view/deps/underscore/index.js");
 

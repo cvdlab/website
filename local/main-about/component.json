@@ -1,9 +1,8 @@
 {
-  "name": "hero",
-  "description": "Hero component",
+  "name": "main-about",
+  "description": "About info component",
   "dependencies": {
-    "component/domify": "*",
-    "timoxley/backbone-view": "*"
+    "component/jquery": "*"
   },
   "scripts": [
     "index.js",

@@ -3,8 +3,6 @@ var domify = require('domify');
 var View = require('backbone-view');
 var template = require('./template');
 
-console.log('NAVBAR!');
-
 module.exports = View.extend({
 
   initialize: function (options) {
