@@ -1,5 +1,5 @@
 {
-  "name": "course-bio",
+  "name": "main-bio",
   "description": "Biomedical Informatics course component",
   "dependencies": {
     "component/jquery": "*"
