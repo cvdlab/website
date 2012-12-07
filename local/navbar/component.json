@@ -4,7 +4,8 @@
   "dependencies": {
     "timoxley/backbone-view": "*",
     "component/jquery": "*",
-    "component/domify": "*"
+    "component/domify": "*",
+    "onirame/foundation": "*"
   },
   "scripts": [
     "index.js",
@@ -12,7 +13,5 @@
   ],
   "styles": [
     "style.css"
-  ],
-  "local": ["foundation"],
-  "paths": ["local"]
+  ]
 }

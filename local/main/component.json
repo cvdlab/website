@@ -1,5 +1,5 @@
 {
-  "name": "navbar",
+  "name": "main",
   "description": "Navigation bar Component",
   "dependencies": {
     "timoxley/backbone-view": "*"

@@ -1,5 +1,5 @@
 {
-  "name": "navbar",
+  "name": "copyright",
   "description": "Navigation bar Component",
   "dependencies": {
     "timoxley/backbone-view": "*"
