@@ -1,6 +1,6 @@
 {
   "name": "hero",
-  "description": "Navigation bar Component",
+  "description": "Hero component",
   "dependencies": {
     "timoxley/backbone-view": "*"
   },

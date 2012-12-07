@@ -1,6 +1,6 @@
 {
   "name": "navbar",
-  "description": "Navigation bar Component",
+  "description": "Navigation bar component",
   "dependencies": {
     "timoxley/backbone-view": "*",
     "component/jquery": "*",
