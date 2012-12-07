@@ -6,8 +6,9 @@ var main_people = require('main-people');
 var main_bio = require('main-bio');
 var main_cg = require('main-cg');
 var main_projects = require('main-projects');
-var Copyright = require('copyright');
+var copyright = require('copyright');
 var Router = require('backbone-router');
+var $ = require('jquery');
 
 module.exports = Router.extend({
 
@@ -16,6 +17,7 @@ module.exports = Router.extend({
       navbar: $('#navbar'),
       hero: $('#hero'),
       main: $('#main'),
+      copyright: $('#copyright')
     };
 
     var views = {
@@ -25,14 +27,24 @@ module.exports = Router.extend({
       main_about: main_about,
       main_people: main_people,
       main_bio: main_bio,
-      main_cg: main_cd,
+      main_cg: main_cg,
       main_projects: main_projects,
-      copiright: new Copyright(),
+      copyright: copyright,
     };
 
-    anchors.navbar.after(navbar.el);
-    anchors.hero.after(hero.el);
-    anchors.copiright.after(copiright.el);
+    anchors.navbar.after(views.navbar.el);
+    anchors.hero.after(views.hero.el);
+    anchors.copyright.after(views.copyright);
+
+    anchors.main
+      .after(views.main_index.hide())
+      .after(views.main_about.hide())
+      .after(views.main_people.hide())
+      .after(views.main_bio.hide())
+      .after(views.main_cg.hide())
+      .after(views.main_projects.hide())
+
+console.log($('.main'));
 
     this.views = views;
     this.anchors = anchors;
@@ -44,18 +56,18 @@ module.exports = Router.extend({
     '': 'index',
     'about': 'about',
     'people': 'people',
-    'teaching/bio': 'bio',
-    'teaching/cg': 'cg',
+    'teaching/biomedical-informatics': 'bio',
+    'teaching/computational-graphics': 'cg',
     'projects': 'projects'
 
   },
 
     render: function(main_page, hero_model) {
-      var views = views;
-      var anchor_main = this.anchors.main;
+      var views = this.views;
+      var anchors_main = this.anchors.main;
 
       views.hero.render(hero_model);
-      anchors_main.find('.main').hide();
+      $('.main').hide();
       views[main_page].show();
     },
 
