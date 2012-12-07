@@ -1,8 +1,8 @@
 {
   "name": "copyright",
-  "description": "Navigation bar Component",
+  "description": "Copyright footer component",
   "dependencies": {
-    "timoxley/backbone-view": "*"
+    "component/jquery": "*"
   },
   "scripts": [
     "index.js",

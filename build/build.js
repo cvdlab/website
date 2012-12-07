@@ -11640,25 +11640,13 @@ require.register("main-projects/template.js", function(module, exports, require)
 module.exports = '<div class="main main-projects">\n  <div class="row">\n    <div class="twelve columns">\n      <h2>Projects</h2>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h4>Libraries</h4>\n      <ul>\n        <li>\n          <a href="https://github.com/cvdlab/plasm.js" target="blank">plasm</a>\n          - JavaScript Programming Language for Solid Modeling\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/plasm-fun" target="blank">plasm-fun</a>\n          - JavaScript Functional Programming Language for Solid Modeling\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/plasm-boilerplate" target="blank">plasm-boilerplate</a>\n          - JavaScript PLaSM getting started repository\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/simplexn" target="blank">simplexn</a>\n          JavaScript dimension-independent geometric kernel based on simplical complex\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/lar" target="blank">lar</a>\n          - JavaScript Linear Algebra Representation framework\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/f" target="blank">f</a>\n          - JavaScript functional library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector2" target="blank">vector2</a>\n          - JavaScript 2d vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector3" target="blank">vector3</a>\n          - JavaScript 3d vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector4" target="blank">vector4</a>\n          - JavaScript 4d vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vectorn" target="blank">vectorn</a>\n          - JavaScript dimension-independet vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/matrix2" target="blank">matrix2</a>\n          - JavaScript 2d matrix library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/matrix3" target="blank">matrix3</a>\n          - JavaScript 3d matrix library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/matrix4" target="blank">matrix4</a>\n          - JavaScript 4d matrix library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector2" target="blank">matrixn</a>\n          - JavaScript dimension-independet matrix library\n        </li>\n      <ul>\n\n      <h4>Handbooks</h4>\n      <ul>\n        <li>\n          <a href="https://github.com/cvdlab/javascript-crumbs" target="blank">javascript-crumbs</a>\n          - JavaScript crumbs\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/git-crumbs" target="blank">git-crumbs</a>\n          - git crumbs</li>\n        <li>\n          <a href="https://github.com/cvdlab/html5-crumbs" target="blank">html5-crumbs</a>\n          - HTML5 crumbs</li>\n        <li>\n          <a href="https://github.com/cvdlab/webgl-crumbs" target="blank">webgl-crumbs</a>\n          - WebGL crumbs\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/plasm-crumbs" target="blank">plasm-crumbs</a>\n          - PLaSM crumbs\n        </li>\n      </ul>\n    </div>\n  </div>\n</div>';
 });
 require.register("copyright/index.js", function(module, exports, require){
-var View = require('backbone-view');
+var $ = require('jquery');
 var template = require('./template');
 
-module.exports = View.extend({
-
-  initialize: function (options) {
-    return this;
-  },
-
-  render: function () {
-    return this;
-  },
-
-  events: {}
-
-});
+module.exports = $(template);
 });
 require.register("copyright/template.js", function(module, exports, require){
-module.exports = '';
+module.exports = '<footer class="row">\n  <div class="twelve columns">\n    <hr />\n    <p>Copyright &copy; 2012 Enrico Marino and Federico Spini</p>\n  </div>\n</footer>';
 });
 require.register("app/index.js", function(module, exports, require){
 var Navbar = require('navbar');
@@ -11853,10 +11841,4 @@ require.alias("component-jquery/index.js", "main-projects/deps/jquery/index.js")
 
 require.alias("copyright/index.js", "app/deps/copyright/index.js");
 require.alias("copyright/template.js", "app/deps/copyright/template.js");
-require.alias("timoxley-backbone-view/index.js", "copyright/deps/backbone-view/index.js");
-require.alias("component-underscore/index.js", "timoxley-backbone-view/deps/underscore/index.js");
-
-require.alias("component-jquery/index.js", "timoxley-backbone-view/deps/jquery/index.js");
-
-require.alias("timoxley-backbone-events/index.js", "timoxley-backbone-view/deps/backbone-events/index.js");
-require.alias("component-object/index.js", "timoxley-backbone-events/deps/object/index.js");
+require.alias("component-jquery/index.js", "copyright/deps/jquery/index.js");
