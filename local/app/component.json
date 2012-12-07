@@ -1,7 +1,10 @@
 {
   "name": "app",
   "description": "App main component",
-  "dependencies": {},
+  "dependencies": {
+    "component/jquery": "*",
+    "spini/backbone-router": "*"
+  },
   "scripts": [
     "index.js"
   ],
@@ -13,9 +16,5 @@
     "hero",
     "main",
     "copyright"
-  ],
-  "remotes": [
-    "https://github.com/spini/backbone-router",
-    "https://github.com/spini/backbone-history"
   ]
 }
