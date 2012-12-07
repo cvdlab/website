@@ -184,1516 +184,7 @@ require.relative = function(parent) {
   };
 
   return fn;
-};require.register("component-underscore/index.js", function(module, exports, require){
-//     Underscore.js 1.3.3
-//     (c) 2009-2012 Jeremy Ashkenas, DocumentCloud Inc.
-//     Underscore is freely distributable under the MIT license.
-//     Portions of Underscore are inspired or borrowed from Prototype,
-//     Oliver Steele's Functional, and John Resig's Micro-Templating.
-//     For all details and documentation:
-//     http://documentcloud.github.com/underscore
-
-(function() {
-
-  // Baseline setup
-  // --------------
-
-  // Establish the root object, `window` in the browser, or `global` on the server.
-  var root = this;
-
-  // Save the previous value of the `_` variable.
-  var previousUnderscore = root._;
-
-  // Establish the object that gets returned to break out of a loop iteration.
-  var breaker = {};
-
-  // Save bytes in the minified (but not gzipped) version:
-  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
-
-  // Create quick reference variables for speed access to core prototypes.
-  var push             = ArrayProto.push,
-      slice            = ArrayProto.slice,
-      unshift          = ArrayProto.unshift,
-      toString         = ObjProto.toString,
-      hasOwnProperty   = ObjProto.hasOwnProperty;
-
-  // All **ECMAScript 5** native function implementations that we hope to use
-  // are declared here.
-  var
-    nativeForEach      = ArrayProto.forEach,
-    nativeMap          = ArrayProto.map,
-    nativeReduce       = ArrayProto.reduce,
-    nativeReduceRight  = ArrayProto.reduceRight,
-    nativeFilter       = ArrayProto.filter,
-    nativeEvery        = ArrayProto.every,
-    nativeSome         = ArrayProto.some,
-    nativeIndexOf      = ArrayProto.indexOf,
-    nativeLastIndexOf  = ArrayProto.lastIndexOf,
-    nativeIsArray      = Array.isArray,
-    nativeKeys         = Object.keys,
-    nativeBind         = FuncProto.bind;
-
-  // Create a safe reference to the Underscore object for use below.
-  var _ = function(obj) { return new wrapper(obj); };
-
-  // Export the Underscore object for **Node.js**, with
-  // backwards-compatibility for the old `require()` API. If we're in
-  // the browser, add `_` as a global object via a string identifier,
-  // for Closure Compiler "advanced" mode.
-  if (typeof exports !== 'undefined') {
-    if (typeof module !== 'undefined' && module.exports) {
-      exports = module.exports = _;
-    }
-    exports._ = _;
-  } else {
-    root['_'] = _;
-  }
-
-  // Current version.
-  _.VERSION = '1.3.3';
-
-  // Collection Functions
-  // --------------------
-
-  // The cornerstone, an `each` implementation, aka `forEach`.
-  // Handles objects with the built-in `forEach`, arrays, and raw objects.
-  // Delegates to **ECMAScript 5**'s native `forEach` if available.
-  var each = _.each = _.forEach = function(obj, iterator, context) {
-    if (obj == null) return;
-    if (nativeForEach && obj.forEach === nativeForEach) {
-      obj.forEach(iterator, context);
-    } else if (obj.length === +obj.length) {
-      for (var i = 0, l = obj.length; i < l; i++) {
-        if (iterator.call(context, obj[i], i, obj) === breaker) return;
-      }
-    } else {
-      for (var key in obj) {
-        if (_.has(obj, key)) {
-          if (iterator.call(context, obj[key], key, obj) === breaker) return;
-        }
-      }
-    }
-  };
-
-  // Return the results of applying the iterator to each element.
-  // Delegates to **ECMAScript 5**'s native `map` if available.
-  _.map = _.collect = function(obj, iterator, context) {
-    var results = [];
-    if (obj == null) return results;
-    if (nativeMap && obj.map === nativeMap) return obj.map(iterator, context);
-    each(obj, function(value, index, list) {
-      results[results.length] = iterator.call(context, value, index, list);
-    });
-    return results;
-  };
-
-  // **Reduce** builds up a single result from a list of values, aka `inject`,
-  // or `foldl`. Delegates to **ECMAScript 5**'s native `reduce` if available.
-  _.reduce = _.foldl = _.inject = function(obj, iterator, memo, context) {
-    var initial = arguments.length > 2;
-    if (obj == null) obj = [];
-    if (nativeReduce && obj.reduce === nativeReduce) {
-      if (context) iterator = _.bind(iterator, context);
-      return initial ? obj.reduce(iterator, memo) : obj.reduce(iterator);
-    }
-    each(obj, function(value, index, list) {
-      if (!initial) {
-        memo = value;
-        initial = true;
-      } else {
-        memo = iterator.call(context, memo, value, index, list);
-      }
-    });
-    if (!initial) throw new TypeError('Reduce of empty array with no initial value');
-    return memo;
-  };
-
-  // The right-associative version of reduce, also known as `foldr`.
-  // Delegates to **ECMAScript 5**'s native `reduceRight` if available.
-  _.reduceRight = _.foldr = function(obj, iterator, memo, context) {
-    var initial = arguments.length > 2;
-    if (obj == null) obj = [];
-    if (nativeReduceRight && obj.reduceRight === nativeReduceRight) {
-      if (context) iterator = _.bind(iterator, context);
-      return initial ? obj.reduceRight(iterator, memo) : obj.reduceRight(iterator);
-    }
-    var reversed = _.toArray(obj).reverse();
-    if (context && !initial) iterator = _.bind(iterator, context);
-    return initial ? _.reduce(reversed, iterator, memo, context) : _.reduce(reversed, iterator);
-  };
-
-  // Return the first value which passes a truth test. Aliased as `detect`.
-  _.find = _.detect = function(obj, iterator, context) {
-    var result;
-    any(obj, function(value, index, list) {
-      if (iterator.call(context, value, index, list)) {
-        result = value;
-        return true;
-      }
-    });
-    return result;
-  };
-
-  // Return all the elements that pass a truth test.
-  // Delegates to **ECMAScript 5**'s native `filter` if available.
-  // Aliased as `select`.
-  _.filter = _.select = function(obj, iterator, context) {
-    var results = [];
-    if (obj == null) return results;
-    if (nativeFilter && obj.filter === nativeFilter) return obj.filter(iterator, context);
-    each(obj, function(value, index, list) {
-      if (iterator.call(context, value, index, list)) results[results.length] = value;
-    });
-    return results;
-  };
-
-  // Return all the elements for which a truth test fails.
-  _.reject = function(obj, iterator, context) {
-    var results = [];
-    if (obj == null) return results;
-    each(obj, function(value, index, list) {
-      if (!iterator.call(context, value, index, list)) results[results.length] = value;
-    });
-    return results;
-  };
-
-  // Determine whether all of the elements match a truth test.
-  // Delegates to **ECMAScript 5**'s native `every` if available.
-  // Aliased as `all`.
-  _.every = _.all = function(obj, iterator, context) {
-    var result = true;
-    if (obj == null) return result;
-    if (nativeEvery && obj.every === nativeEvery) return obj.every(iterator, context);
-    each(obj, function(value, index, list) {
-      if (!(result = result && iterator.call(context, value, index, list))) return breaker;
-    });
-    return !!result;
-  };
-
-  // Determine if at least one element in the object matches a truth test.
-  // Delegates to **ECMAScript 5**'s native `some` if available.
-  // Aliased as `any`.
-  var any = _.some = _.any = function(obj, iterator, context) {
-    iterator || (iterator = _.identity);
-    var result = false;
-    if (obj == null) return result;
-    if (nativeSome && obj.some === nativeSome) return obj.some(iterator, context);
-    each(obj, function(value, index, list) {
-      if (result || (result = iterator.call(context, value, index, list))) return breaker;
-    });
-    return !!result;
-  };
-
-  // Determine if a given value is included in the array or object using `===`.
-  // Aliased as `contains`.
-  _.include = _.contains = function(obj, target) {
-    var found = false;
-    if (obj == null) return found;
-    if (nativeIndexOf && obj.indexOf === nativeIndexOf) return obj.indexOf(target) != -1;
-    found = any(obj, function(value) {
-      return value === target;
-    });
-    return found;
-  };
-
-  // Invoke a method (with arguments) on every item in a collection.
-  _.invoke = function(obj, method) {
-    var args = slice.call(arguments, 2);
-    return _.map(obj, function(value) {
-      return (_.isFunction(method) ? method : value[method]).apply(value, args);
-    });
-  };
-
-  // Convenience version of a common use case of `map`: fetching a property.
-  _.pluck = function(obj, key) {
-    return _.map(obj, function(value){ return value[key]; });
-  };
-
-  // Return the maximum element or (element-based computation).
-  // Can't optimize arrays of integers longer than 65,535 elements.
-  // See: https://bugs.webkit.org/show_bug.cgi?id=80797
-  _.max = function(obj, iterator, context) {
-    if (!iterator && _.isArray(obj) && obj[0] === +obj[0] && obj.length < 65535) {
-      return Math.max.apply(Math, obj);
-    }
-    if (!iterator && _.isEmpty(obj)) return -Infinity;
-    var result = {computed : -Infinity};
-    each(obj, function(value, index, list) {
-      var computed = iterator ? iterator.call(context, value, index, list) : value;
-      computed >= result.computed && (result = {value : value, computed : computed});
-    });
-    return result.value;
-  };
-
-  // Return the minimum element (or element-based computation).
-  _.min = function(obj, iterator, context) {
-    if (!iterator && _.isArray(obj) && obj[0] === +obj[0] && obj.length < 65535) {
-      return Math.min.apply(Math, obj);
-    }
-    if (!iterator && _.isEmpty(obj)) return Infinity;
-    var result = {computed : Infinity};
-    each(obj, function(value, index, list) {
-      var computed = iterator ? iterator.call(context, value, index, list) : value;
-      computed < result.computed && (result = {value : value, computed : computed});
-    });
-    return result.value;
-  };
-
-  // Shuffle an array.
-  _.shuffle = function(obj) {
-    var rand;
-    var index = 0;
-    var shuffled = [];
-    each(obj, function(value) {
-      rand = Math.floor(Math.random() * ++index);
-      shuffled[index - 1] = shuffled[rand];
-      shuffled[rand] = value;
-    });
-    return shuffled;
-  };
-
-  // Sort the object's values by a criterion produced by an iterator.
-  _.sortBy = function(obj, val, context) {
-    var iterator = lookupIterator(obj, val);
-    return _.pluck(_.map(obj, function(value, index, list) {
-      return {
-        value : value,
-        criteria : iterator.call(context, value, index, list)
-      };
-    }).sort(function(left, right) {
-      var a = left.criteria, b = right.criteria;
-      if (a === void 0) return 1;
-      if (b === void 0) return -1;
-      return a < b ? -1 : a > b ? 1 : 0;
-    }), 'value');
-  };
-
-  // An internal function to generate lookup iterators.
-  var lookupIterator = function(obj, val) {
-    return _.isFunction(val) ? val : function(obj) { return obj[val]; };
-  };
-
-  // An internal function used for aggregate "group by" operations.
-  var group = function(obj, val, behavior) {
-    var result = {};
-    var iterator = lookupIterator(obj, val);
-    each(obj, function(value, index) {
-      var key = iterator(value, index);
-      behavior(result, key, value);
-    });
-    return result;
-  };
-
-  // Groups the object's values by a criterion. Pass either a string attribute
-  // to group by, or a function that returns the criterion.
-  _.groupBy = function(obj, val) {
-    return group(obj, val, function(result, key, value) {
-      (result[key] || (result[key] = [])).push(value);
-    });
-  };
-
-  // Counts instances of an object that group by a certain criterion. Pass
-  // either a string attribute to count by, or a function that returns the
-  // criterion.
-  _.countBy = function(obj, val) {
-    return group(obj, val, function(result, key, value) {
-      result[key] || (result[key] = 0);
-      result[key]++;
-    });
-  };
-
-  // Use a comparator function to figure out the smallest index at which
-  // an object should be inserted so as to maintain order. Uses binary search.
-  _.sortedIndex = function(array, obj, iterator) {
-    iterator || (iterator = _.identity);
-    var value = iterator(obj);
-    var low = 0, high = array.length;
-    while (low < high) {
-      var mid = (low + high) >> 1;
-      iterator(array[mid]) < value ? low = mid + 1 : high = mid;
-    }
-    return low;
-  };
-
-  // Safely convert anything iterable into a real, live array.
-  _.toArray = function(obj) {
-    if (!obj)                                     return [];
-    if (_.isArray(obj))                           return slice.call(obj);
-    if (_.isArguments(obj))                       return slice.call(obj);
-    if (obj.toArray && _.isFunction(obj.toArray)) return obj.toArray();
-    return _.values(obj);
-  };
-
-  // Return the number of elements in an object.
-  _.size = function(obj) {
-    return _.isArray(obj) ? obj.length : _.keys(obj).length;
-  };
-
-  // Array Functions
-  // ---------------
-
-  // Get the first element of an array. Passing **n** will return the first N
-  // values in the array. Aliased as `head` and `take`. The **guard** check
-  // allows it to work with `_.map`.
-  _.first = _.head = _.take = function(array, n, guard) {
-    return (n != null) && !guard ? slice.call(array, 0, n) : array[0];
-  };
-
-  // Returns everything but the last entry of the array. Especially useful on
-  // the arguments object. Passing **n** will return all the values in
-  // the array, excluding the last N. The **guard** check allows it to work with
-  // `_.map`.
-  _.initial = function(array, n, guard) {
-    return slice.call(array, 0, array.length - ((n == null) || guard ? 1 : n));
-  };
-
-  // Get the last element of an array. Passing **n** will return the last N
-  // values in the array. The **guard** check allows it to work with `_.map`.
-  _.last = function(array, n, guard) {
-    if ((n != null) && !guard) {
-      return slice.call(array, Math.max(array.length - n, 0));
-    } else {
-      return array[array.length - 1];
-    }
-  };
-
-  // Returns everything but the first entry of the array. Aliased as `tail`.
-  // Especially useful on the arguments object. Passing an **index** will return
-  // the rest of the values in the array from that index onward. The **guard**
-  // check allows it to work with `_.map`.
-  _.rest = _.tail = function(array, index, guard) {
-    return slice.call(array, (index == null) || guard ? 1 : index);
-  };
-
-  // Trim out all falsy values from an array.
-  _.compact = function(array) {
-    return _.filter(array, function(value){ return !!value; });
-  };
-
-  // Internal implementation of a recursive `flatten` function.
-  var flatten = function(input, shallow, output) {
-    each(input, function(value) {
-      if (_.isArray(value)) {
-        shallow ? push.apply(output, value) : flatten(value, shallow, output);
-      } else {
-        output.push(value);
-      }
-    });
-    return output;
-  };
-
-  // Return a completely flattened version of an array.
-  _.flatten = function(array, shallow) {
-    return flatten(array, shallow, []);
-  };
-
-  // Return a version of the array that does not contain the specified value(s).
-  _.without = function(array) {
-    return _.difference(array, slice.call(arguments, 1));
-  };
-
-  // Produce a duplicate-free version of the array. If the array has already
-  // been sorted, you have the option of using a faster algorithm.
-  // Aliased as `unique`.
-  _.uniq = _.unique = function(array, isSorted, iterator) {
-    var initial = iterator ? _.map(array, iterator) : array;
-    var results = [];
-    _.reduce(initial, function(memo, value, index) {
-      if (isSorted ? (_.last(memo) !== value || !memo.length) : !_.include(memo, value)) {
-        memo.push(value);
-        results.push(array[index]);
-      }
-      return memo;
-    }, []);
-    return results;
-  };
-
-  // Produce an array that contains the union: each distinct element from all of
-  // the passed-in arrays.
-  _.union = function() {
-    return _.uniq(flatten(arguments, true, []));
-  };
-
-  // Produce an array that contains every item shared between all the
-  // passed-in arrays.
-  _.intersection = function(array) {
-    var rest = slice.call(arguments, 1);
-    return _.filter(_.uniq(array), function(item) {
-      return _.every(rest, function(other) {
-        return _.indexOf(other, item) >= 0;
-      });
-    });
-  };
-
-  // Take the difference between one array and a number of other arrays.
-  // Only the elements present in just the first array will remain.
-  _.difference = function(array) {
-    var rest = flatten(slice.call(arguments, 1), true, []);
-    return _.filter(array, function(value){ return !_.include(rest, value); });
-  };
-
-  // Zip together multiple lists into a single array -- elements that share
-  // an index go together.
-  _.zip = function() {
-    var args = slice.call(arguments);
-    var length = _.max(_.pluck(args, 'length'));
-    var results = new Array(length);
-    for (var i = 0; i < length; i++) {
-      results[i] = _.pluck(args, "" + i);
-    }
-    return results;
-  };
-
-  // Zip together two arrays -- an array of keys and an array of values -- into
-  // a single object.
-  _.zipObject = function(keys, values) {
-    var result = {};
-    for (var i = 0, l = keys.length; i < l; i++) {
-      result[keys[i]] = values[i];
-    }
-    return result;
-  };
-
-  // If the browser doesn't supply us with indexOf (I'm looking at you, **MSIE**),
-  // we need this function. Return the position of the first occurrence of an
-  // item in an array, or -1 if the item is not included in the array.
-  // Delegates to **ECMAScript 5**'s native `indexOf` if available.
-  // If the array is large and already in sort order, pass `true`
-  // for **isSorted** to use binary search.
-  _.indexOf = function(array, item, isSorted) {
-    if (array == null) return -1;
-    var i, l;
-    if (isSorted) {
-      i = _.sortedIndex(array, item);
-      return array[i] === item ? i : -1;
-    }
-    if (nativeIndexOf && array.indexOf === nativeIndexOf) return array.indexOf(item);
-    for (i = 0, l = array.length; i < l; i++) if (array[i] === item) return i;
-    return -1;
-  };
-
-  // Delegates to **ECMAScript 5**'s native `lastIndexOf` if available.
-  _.lastIndexOf = function(array, item) {
-    if (array == null) return -1;
-    if (nativeLastIndexOf && array.lastIndexOf === nativeLastIndexOf) return array.lastIndexOf(item);
-    var i = array.length;
-    while (i--) if (array[i] === item) return i;
-    return -1;
-  };
-
-  // Generate an integer Array containing an arithmetic progression. A port of
-  // the native Python `range()` function. See
-  // [the Python documentation](http://docs.python.org/library/functions.html#range).
-  _.range = function(start, stop, step) {
-    if (arguments.length <= 1) {
-      stop = start || 0;
-      start = 0;
-    }
-    step = arguments[2] || 1;
-
-    var len = Math.max(Math.ceil((stop - start) / step), 0);
-    var idx = 0;
-    var range = new Array(len);
-
-    while(idx < len) {
-      range[idx++] = start;
-      start += step;
-    }
-
-    return range;
-  };
-
-  // Function (ahem) Functions
-  // ------------------
-
-  // Reusable constructor function for prototype setting.
-  var ctor = function(){};
-
-  // Create a function bound to a given object (assigning `this`, and arguments,
-  // optionally). Binding with arguments is also known as `curry`.
-  // Delegates to **ECMAScript 5**'s native `Function.bind` if available.
-  // We check for `func.bind` first, to fail fast when `func` is undefined.
-  _.bind = function bind(func, context) {
-    var bound, args;
-    if (func.bind === nativeBind && nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
-    if (!_.isFunction(func)) throw new TypeError;
-    args = slice.call(arguments, 2);
-    return bound = function() {
-      if (!(this instanceof bound)) return func.apply(context, args.concat(slice.call(arguments)));
-      ctor.prototype = func.prototype;
-      var self = new ctor;
-      var result = func.apply(self, args.concat(slice.call(arguments)));
-      if (Object(result) === result) return result;
-      return self;
-    };
-  };
-
-  // Bind all of an object's methods to that object. Useful for ensuring that
-  // all callbacks defined on an object belong to it.
-  _.bindAll = function(obj) {
-    var funcs = slice.call(arguments, 1);
-    if (funcs.length == 0) funcs = _.functions(obj);
-    each(funcs, function(f) { obj[f] = _.bind(obj[f], obj); });
-    return obj;
-  };
-
-  // Memoize an expensive function by storing its results.
-  _.memoize = function(func, hasher) {
-    var memo = {};
-    hasher || (hasher = _.identity);
-    return function() {
-      var key = hasher.apply(this, arguments);
-      return _.has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
-    };
-  };
-
-  // Delays a function for the given number of milliseconds, and then calls
-  // it with the arguments supplied.
-  _.delay = function(func, wait) {
-    var args = slice.call(arguments, 2);
-    return setTimeout(function(){ return func.apply(null, args); }, wait);
-  };
-
-  // Defers a function, scheduling it to run after the current call stack has
-  // cleared.
-  _.defer = function(func) {
-    return _.delay.apply(_, [func, 1].concat(slice.call(arguments, 1)));
-  };
-
-  // Returns a function, that, when invoked, will only be triggered at most once
-  // during a given window of time.
-  _.throttle = function(func, wait) {
-    var context, args, timeout, throttling, more, result;
-    var whenDone = _.debounce(function(){ more = throttling = false; }, wait);
-    return function() {
-      context = this; args = arguments;
-      var later = function() {
-        timeout = null;
-        if (more) func.apply(context, args);
-        whenDone();
-      };
-      if (!timeout) timeout = setTimeout(later, wait);
-      if (throttling) {
-        more = true;
-      } else {
-        throttling = true;
-        result = func.apply(context, args);
-      }
-      whenDone();
-      return result;
-    };
-  };
-
-  // Returns a function, that, as long as it continues to be invoked, will not
-  // be triggered. The function will be called after it stops being called for
-  // N milliseconds. If `immediate` is passed, trigger the function on the
-  // leading edge, instead of the trailing.
-  _.debounce = function(func, wait, immediate) {
-    var timeout;
-    return function() {
-      var context = this, args = arguments;
-      var later = function() {
-        timeout = null;
-        if (!immediate) func.apply(context, args);
-      };
-      var callNow = immediate && !timeout;
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-      if (callNow) func.apply(context, args);
-    };
-  };
-
-  // Returns a function that will be executed at most one time, no matter how
-  // often you call it. Useful for lazy initialization.
-  _.once = function(func) {
-    var ran = false, memo;
-    return function() {
-      if (ran) return memo;
-      ran = true;
-      return memo = func.apply(this, arguments);
-    };
-  };
-
-  // Returns the first function passed as an argument to the second,
-  // allowing you to adjust arguments, run code before and after, and
-  // conditionally execute the original function.
-  _.wrap = function(func, wrapper) {
-    return function() {
-      var args = [func].concat(slice.call(arguments, 0));
-      return wrapper.apply(this, args);
-    };
-  };
-
-  // Returns a function that is the composition of a list of functions, each
-  // consuming the return value of the function that follows.
-  _.compose = function() {
-    var funcs = arguments;
-    return function() {
-      var args = arguments;
-      for (var i = funcs.length - 1; i >= 0; i--) {
-        args = [funcs[i].apply(this, args)];
-      }
-      return args[0];
-    };
-  };
-
-  // Returns a function that will only be executed after being called N times.
-  _.after = function(times, func) {
-    if (times <= 0) return func();
-    return function() {
-      if (--times < 1) {
-        return func.apply(this, arguments);
-      }
-    };
-  };
-
-  // Object Functions
-  // ----------------
-
-  // Retrieve the names of an object's properties.
-  // Delegates to **ECMAScript 5**'s native `Object.keys`
-  _.keys = nativeKeys || function(obj) {
-    if (obj !== Object(obj)) throw new TypeError('Invalid object');
-    var keys = [];
-    for (var key in obj) if (_.has(obj, key)) keys[keys.length] = key;
-    return keys;
-  };
-
-  // Retrieve the values of an object's properties.
-  _.values = function(obj) {
-    return _.map(obj, _.identity);
-  };
-
-  // Return a sorted list of the function names available on the object.
-  // Aliased as `methods`
-  _.functions = _.methods = function(obj) {
-    var names = [];
-    for (var key in obj) {
-      if (_.isFunction(obj[key])) names.push(key);
-    }
-    return names.sort();
-  };
-
-  // Extend a given object with all the properties in passed-in object(s).
-  _.extend = function(obj) {
-    each(slice.call(arguments, 1), function(source) {
-      for (var prop in source) {
-        obj[prop] = source[prop];
-      }
-    });
-    return obj;
-  };
-
-  // Return a copy of the object only containing the whitelisted properties.
-  _.pick = function(obj) {
-    var result = {};
-    each(flatten(slice.call(arguments, 1), true, []), function(key) {
-      if (key in obj) result[key] = obj[key];
-    });
-    return result;
-  };
-
-  // Fill in a given object with default properties.
-  _.defaults = function(obj) {
-    each(slice.call(arguments, 1), function(source) {
-      for (var prop in source) {
-        if (obj[prop] == null) obj[prop] = source[prop];
-      }
-    });
-    return obj;
-  };
-
-  // Create a (shallow-cloned) duplicate of an object.
-  _.clone = function(obj) {
-    if (!_.isObject(obj)) return obj;
-    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
-  };
-
-  // Invokes interceptor with the obj, and then returns obj.
-  // The primary purpose of this method is to "tap into" a method chain, in
-  // order to perform operations on intermediate results within the chain.
-  _.tap = function(obj, interceptor) {
-    interceptor(obj);
-    return obj;
-  };
-
-  // Internal recursive comparison function for `isEqual`.
-  var eq = function(a, b, stack) {
-    // Identical objects are equal. `0 === -0`, but they aren't identical.
-    // See the Harmony `egal` proposal: http://wiki.ecmascript.org/doku.php?id=harmony:egal.
-    if (a === b) return a !== 0 || 1 / a == 1 / b;
-    // A strict comparison is necessary because `null == undefined`.
-    if (a == null || b == null) return a === b;
-    // Unwrap any wrapped objects.
-    if (a._chain) a = a._wrapped;
-    if (b._chain) b = b._wrapped;
-    // Invoke a custom `isEqual` method if one is provided.
-    if (a.isEqual && _.isFunction(a.isEqual)) return a.isEqual(b);
-    if (b.isEqual && _.isFunction(b.isEqual)) return b.isEqual(a);
-    // Compare `[[Class]]` names.
-    var className = toString.call(a);
-    if (className != toString.call(b)) return false;
-    switch (className) {
-      // Strings, numbers, dates, and booleans are compared by value.
-      case '[object String]':
-        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
-        // equivalent to `new String("5")`.
-        return a == String(b);
-      case '[object Number]':
-        // `NaN`s are equivalent, but non-reflexive. An `egal` comparison is performed for
-        // other numeric values.
-        return a != +a ? b != +b : (a == 0 ? 1 / a == 1 / b : a == +b);
-      case '[object Date]':
-      case '[object Boolean]':
-        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
-        // millisecond representations. Note that invalid dates with millisecond representations
-        // of `NaN` are not equivalent.
-        return +a == +b;
-      // RegExps are compared by their source patterns and flags.
-      case '[object RegExp]':
-        return a.source == b.source &&
-               a.global == b.global &&
-               a.multiline == b.multiline &&
-               a.ignoreCase == b.ignoreCase;
-    }
-    if (typeof a != 'object' || typeof b != 'object') return false;
-    // Assume equality for cyclic structures. The algorithm for detecting cyclic
-    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
-    var length = stack.length;
-    while (length--) {
-      // Linear search. Performance is inversely proportional to the number of
-      // unique nested structures.
-      if (stack[length] == a) return true;
-    }
-    // Add the first object to the stack of traversed objects.
-    stack.push(a);
-    var size = 0, result = true;
-    // Recursively compare objects and arrays.
-    if (className == '[object Array]') {
-      // Compare array lengths to determine if a deep comparison is necessary.
-      size = a.length;
-      result = size == b.length;
-      if (result) {
-        // Deep compare the contents, ignoring non-numeric properties.
-        while (size--) {
-          // Ensure commutative equality for sparse arrays.
-          if (!(result = size in a == size in b && eq(a[size], b[size], stack))) break;
-        }
-      }
-    } else {
-      // Objects with different constructors are not equivalent.
-      if ('constructor' in a != 'constructor' in b || a.constructor != b.constructor) return false;
-      // Deep compare objects.
-      for (var key in a) {
-        if (_.has(a, key)) {
-          // Count the expected number of properties.
-          size++;
-          // Deep compare each member.
-          if (!(result = _.has(b, key) && eq(a[key], b[key], stack))) break;
-        }
-      }
-      // Ensure that both objects contain the same number of properties.
-      if (result) {
-        for (key in b) {
-          if (_.has(b, key) && !(size--)) break;
-        }
-        result = !size;
-      }
-    }
-    // Remove the first object from the stack of traversed objects.
-    stack.pop();
-    return result;
-  };
-
-  // Perform a deep comparison to check if two objects are equal.
-  _.isEqual = function(a, b) {
-    return eq(a, b, []);
-  };
-
-  // Is a given array, string, or object empty?
-  // An "empty" object has no enumerable own-properties.
-  _.isEmpty = function(obj) {
-    if (obj == null) return true;
-    if (_.isArray(obj) || _.isString(obj)) return obj.length === 0;
-    for (var key in obj) if (_.has(obj, key)) return false;
-    return true;
-  };
-
-  // Is a given value a DOM element?
-  _.isElement = function(obj) {
-    return !!(obj && obj.nodeType == 1);
-  };
-
-  // Is a given value an array?
-  // Delegates to ECMA5's native Array.isArray
-  _.isArray = nativeIsArray || function(obj) {
-    return toString.call(obj) == '[object Array]';
-  };
-
-  // Is a given variable an object?
-  _.isObject = function(obj) {
-    return obj === Object(obj);
-  };
-
-  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp.
-  each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp'], function(name) {
-    _['is' + name] = function(obj) {
-      return toString.call(obj) == '[object ' + name + ']';
-    };
-  });
-
-  // Define a fallback version of the method in browsers (ahem, IE), where
-  // there isn't any inspectable "Arguments" type.
-  if (!_.isArguments(arguments)) {
-    _.isArguments = function(obj) {
-      return !!(obj && _.has(obj, 'callee'));
-    };
-  }
-
-  // Is a given object a finite number?
-  _.isFinite = function(obj) {
-    return _.isNumber(obj) && isFinite(obj);
-  };
-
-  // Is the given value `NaN`?
-  _.isNaN = function(obj) {
-    // `NaN` is the only value for which `===` is not reflexive.
-    return obj !== obj;
-  };
-
-  // Is a given value a boolean?
-  _.isBoolean = function(obj) {
-    return obj === true || obj === false || toString.call(obj) == '[object Boolean]';
-  };
-
-  // Is a given value equal to null?
-  _.isNull = function(obj) {
-    return obj === null;
-  };
-
-  // Is a given variable undefined?
-  _.isUndefined = function(obj) {
-    return obj === void 0;
-  };
-
-  // Shortcut function for checking if an object has a given property directly
-  // on itself (in other words, not on a prototype).
-  _.has = function(obj, key) {
-    return hasOwnProperty.call(obj, key);
-  };
-
-  // Utility Functions
-  // -----------------
-
-  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
-  // previous owner. Returns a reference to the Underscore object.
-  _.noConflict = function() {
-    root._ = previousUnderscore;
-    return this;
-  };
-
-  // Keep the identity function around for default iterators.
-  _.identity = function(value) {
-    return value;
-  };
-
-  // Run a function **n** times.
-  _.times = function(n, iterator, context) {
-    for (var i = 0; i < n; i++) iterator.call(context, i);
-  };
-
-  // List of HTML entities for escaping.
-  var htmlEscapes = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;',
-    '/': '&#x2F;'
-  };
-
-  // Regex containing the keys listed immediately above.
-  var htmlEscaper = /[&<>"'\/]/g;
-
-  // Escape a string for HTML interpolation.
-  _.escape = function(string) {
-    return ('' + string).replace(htmlEscaper, function(match) {
-      return htmlEscapes[match];
-    });
-  };
-
-  // If the value of the named property is a function then invoke it;
-  // otherwise, return it.
-  _.result = function(object, property) {
-    if (object == null) return null;
-    var value = object[property];
-    return _.isFunction(value) ? value.call(object) : value;
-  };
-
-  // Add your own custom functions to the Underscore object, ensuring that
-  // they're correctly added to the OOP wrapper as well.
-  _.mixin = function(obj) {
-    each(_.functions(obj), function(name){
-      addToWrapper(name, _[name] = obj[name]);
-    });
-  };
-
-  // Generate a unique integer id (unique within the entire client session).
-  // Useful for temporary DOM ids.
-  var idCounter = 0;
-  _.uniqueId = function(prefix) {
-    var id = idCounter++;
-    return prefix ? prefix + id : id;
-  };
-
-  // By default, Underscore uses ERB-style template delimiters, change the
-  // following template settings to use alternative delimiters.
-  _.templateSettings = {
-    evaluate    : /<%([\s\S]+?)%>/g,
-    interpolate : /<%=([\s\S]+?)%>/g,
-    escape      : /<%-([\s\S]+?)%>/g
-  };
-
-  // When customizing `templateSettings`, if you don't want to define an
-  // interpolation, evaluation or escaping regex, we need one that is
-  // guaranteed not to match.
-  var noMatch = /.^/;
-
-  // Certain characters need to be escaped so that they can be put into a
-  // string literal.
-  var escapes = {
-    '\\':   '\\',
-    "'":    "'",
-    r:      '\r',
-    n:      '\n',
-    t:      '\t',
-    u2028:  '\u2028',
-    u2029:  '\u2029'
-  };
-
-  for (var key in escapes) escapes[escapes[key]] = key;
-  var escaper = /\\|'|\r|\n|\t|\u2028|\u2029/g;
-  var unescaper = /\\(\\|'|r|n|t|u2028|u2029)/g;
-
-  // Within an interpolation, evaluation, or escaping, remove HTML escaping
-  // that had been previously added.
-  var unescape = function(code) {
-    return code.replace(unescaper, function(match, escape) {
-      return escapes[escape];
-    });
-  };
-
-  // JavaScript micro-templating, similar to John Resig's implementation.
-  // Underscore templating handles arbitrary delimiters, preserves whitespace,
-  // and correctly escapes quotes within interpolated code.
-  _.template = function(text, data, settings) {
-    settings = _.defaults(settings || {}, _.templateSettings);
-
-    // Compile the template source, taking care to escape characters that
-    // cannot be included in a string literal and then unescape them in code
-    // blocks.
-    var source = "__p+='" + text
-      .replace(escaper, function(match) {
-        return '\\' + escapes[match];
-      })
-      .replace(settings.escape || noMatch, function(match, code) {
-        return "'+\n((__t=(" + unescape(code) + "))==null?'':_.escape(__t))+\n'";
-      })
-      .replace(settings.interpolate || noMatch, function(match, code) {
-        return "'+\n((__t=(" + unescape(code) + "))==null?'':__t)+\n'";
-      })
-      .replace(settings.evaluate || noMatch, function(match, code) {
-        return "';\n" + unescape(code) + "\n__p+='";
-      }) + "';\n";
-
-    // If a variable is not specified, place data values in local scope.
-    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
-
-    source = "var __t,__p='',__j=Array.prototype.join," +
-      "print=function(){__p+=__j.call(arguments,'')};\n" +
-      source + "return __p;\n";
-
-    var render = new Function(settings.variable || 'obj', '_', source);
-    if (data) return render(data, _);
-    var template = function(data) {
-      return render.call(this, data, _);
-    };
-
-    // Provide the compiled function source as a convenience for precompilation.
-    template.source = 'function(' + (settings.variable || 'obj') + '){\n' + source + '}';
-
-    return template;
-  };
-
-  // Add a "chain" function, which will delegate to the wrapper.
-  _.chain = function(obj) {
-    return _(obj).chain();
-  };
-
-  // The OOP Wrapper
-  // ---------------
-
-  // If Underscore is called as a function, it returns a wrapped object that
-  // can be used OO-style. This wrapper holds altered versions of all the
-  // underscore functions. Wrapped objects may be chained.
-  var wrapper = function(obj) { this._wrapped = obj; };
-
-  // Expose `wrapper.prototype` as `_.prototype`
-  _.prototype = wrapper.prototype;
-
-  // Helper function to continue chaining intermediate results.
-  var result = function(obj, chain) {
-    return chain ? _(obj).chain() : obj;
-  };
-
-  // A method to easily add functions to the OOP wrapper.
-  var addToWrapper = function(name, func) {
-    wrapper.prototype[name] = function() {
-      var args = slice.call(arguments);
-      unshift.call(args, this._wrapped);
-      return result(func.apply(_, args), this._chain);
-    };
-  };
-
-  // Add all of the Underscore functions to the wrapper object.
-  _.mixin(_);
-
-  // Add all mutator Array functions to the wrapper.
-  each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
-    var method = ArrayProto[name];
-    wrapper.prototype[name] = function() {
-      var obj = this._wrapped;
-      method.apply(obj, arguments);
-      if ((name == 'shift' || name == 'splice') && obj.length === 0) delete obj[0];
-      return result(obj, this._chain);
-    };
-  });
-
-  // Add all accessor Array functions to the wrapper.
-  each(['concat', 'join', 'slice'], function(name) {
-    var method = ArrayProto[name];
-    wrapper.prototype[name] = function() {
-      return result(method.apply(this._wrapped, arguments), this._chain);
-    };
-  });
-
-  // Start chaining a wrapped Underscore object.
-  wrapper.prototype.chain = function() {
-    this._chain = true;
-    return this;
-  };
-
-  // Extracts the result from a wrapped and chained object.
-  wrapper.prototype.value = function() {
-    return this._wrapped;
-  };
-
-}).call(this);
-
-});
-require.register("component-object/index.js", function(module, exports, require){
-
-/**
- * HOP ref.
- */
-
-var has = Object.prototype.hasOwnProperty;
-
-/**
- * Return own keys in `obj`.
- *
- * @param {Object} obj
- * @return {Array}
- * @api public
- */
-
-exports.keys = Object.keys || function(obj){
-  var keys = [];
-  for (var key in obj) {
-    if (has.call(obj, key)) {
-      keys.push(key);
-    }
-  }
-  return keys;
-};
-
-/**
- * Return own values in `obj`.
- *
- * @param {Object} obj
- * @return {Array}
- * @api public
- */
-
-exports.values = function(obj){
-  var vals = [];
-  for (var key in obj) {
-    if (has.call(obj, key)) {
-      vals.push(obj[key]);
-    }
-  }
-  return vals;
-};
-
-/**
- * Merge `b` into `a`.
- *
- * @param {Object} a
- * @param {Object} b
- * @return {Object} a
- * @api public
- */
-
-exports.merge = function(a, b){
-  for (var key in b) {
-    if (has.call(b, key)) {
-      a[key] = b[key];
-    }
-  }
-  return a;
-};
-
-/**
- * Return length of `obj`.
- *
- * @param {Object} obj
- * @return {Number}
- * @api public
- */
-
-exports.length = function(obj){
-  return exports.keys(obj).length;
-};
-
-/**
- * Check if `obj` is empty.
- *
- * @param {Object} obj
- * @return {Boolean}
- * @api public
- */
-
-exports.isEmpty = function(obj){
-  return 0 == exports.length(obj);
-};
-});
-require.register("timoxley-backbone-events/index.js", function(module, exports, require){
-// Backbone.Events
-// -----------------
-
-var object = require('object')
-
-// Regular expression used to split event strings
-var eventSplitter = /\s+/;
-
-// A module that can be mixed in to *any object* in order to provide it with
-// custom events. You may bind with `on` or remove with `off` callback functions
-// to an event; `trigger`-ing an event fires all callbacks in succession.
-//
-//     var object = {};
-//     _.extend(object, Backbone.Events);
-//     object.on('expand', function(){ alert('expanded'); });
-//     object.trigger('expand');
-//
-var Events = module.exports = {
-
-  // Bind one or more space separated events, `events`, to a `callback`
-  // function. Passing `"all"` will bind the callback to all events fired.
-  on: function(events, callback, context) {
-    var calls, event, list;
-    if (!callback) return this;
-
-    events = events.split(eventSplitter);
-    calls = this._callbacks || (this._callbacks = {});
-
-    while (event = events.shift()) {
-      list = calls[event] || (calls[event] = []);
-      list.push(callback, context);
-    }
-
-    return this;
-  },
-
-  // Remove one or many callbacks. If `context` is null, removes all callbacks
-  // with that function. If `callback` is null, removes all callbacks for the
-  // event. If `events` is null, removes all bound callbacks for all events.
-  off: function(events, callback, context) {
-    var event, calls, list, i;
-
-    // No events, or removing *all* events.
-    if (!(calls = this._callbacks)) return this;
-    if (!(events || callback || context)) {
-      delete this._callbacks;
-      return this;
-    }
-
-    events = events ? events.split(eventSplitter) : object.keys(calls);
-
-    // Loop through the callback list, splicing where appropriate.
-    while (event = events.shift()) {
-      if (!(list = calls[event]) || !(callback || context)) {
-        delete calls[event];
-        continue;
-      }
-
-      for (i = list.length - 2; i >= 0; i -= 2) {
-        if (!(callback && list[i] !== callback || context && list[i + 1] !== context)) {
-          list.splice(i, 2);
-        }
-      }
-    }
-
-    return this;
-  },
-
-  // Trigger one or many events, firing all bound callbacks. Callbacks are
-  // passed the same arguments as `trigger` is, apart from the event name
-  // (unless you're listening on `"all"`, which will cause your callback to
-  // receive the true name of the event as the first argument).
-  trigger: function(events) {
-    var event, calls, list, i, length, args, all, rest;
-    if (!(calls = this._callbacks)) return this;
-
-    rest = [];
-    events = events.split(eventSplitter);
-
-    // Fill up `rest` with the callback arguments.  Since we're only copying
-    // the tail of `arguments`, a loop is much faster than Array#slice.
-    for (i = 1, length = arguments.length; i < length; i++) {
-      rest[i - 1] = arguments[i];
-    }
-
-    // For each event, walk through the list of callbacks twice, first to
-    // trigger the event, then to trigger any `"all"` callbacks.
-    while (event = events.shift()) {
-      // Copy callback lists to prevent modification.
-      if (all = calls.all) all = all.slice();
-      if (list = calls[event]) list = list.slice();
-
-      // Execute event callbacks.
-      if (list) {
-        for (i = 0, length = list.length; i < length; i += 2) {
-          list[i].apply(list[i + 1] || this, rest);
-        }
-      }
-
-      // Execute "all" callbacks.
-      if (all) {
-        args = [event].concat(rest);
-        for (i = 0, length = all.length; i < length; i += 2) {
-          all[i].apply(all[i + 1] || this, args);
-        }
-      }
-    }
-
-    return this;
-  }
-
-};
-
-// Aliases for backwards compatibility.
-Events.bind   = Events.on;
-Events.unbind = Events.off;
-
-});
-require.register("timoxley-backbone-view/index.js", function(module, exports, require){
-// Backbone.View
-// -------------
-var _ = require('underscore')
-var $ = require('jquery')
-var Events = require('backbone-events')
-
-// Creating a Backbone.View creates its initial element outside of the DOM,
-// if an existing element is not provided...
-var View = module.exports = function(options) {
-  this.cid = _.uniqueId('view');
-  this._configure(options || {});
-  this._ensureElement();
-  this.initialize.apply(this, arguments);
-  this.delegateEvents();
-};
-// Cached regex to split keys for `delegate`.
-var delegateEventSplitter = /^(\S+)\s*(.*)$/;
-
-// List of view options to be merged as properties.
-var viewOptions = ['model', 'collection', 'el', 'id', 'attributes', 'className', 'tagName'];
-
-// Set up all inheritable **Backbone.View** properties and methods.
-_.extend(View.prototype, Events, {
-
-  // The default `tagName` of a View's element is `"div"`.
-  tagName: 'div',
-
-  // jQuery delegate for element lookup, scoped to DOM elements within the
-  // current view. This should be prefered to global lookups where possible.
-  $: function(selector) {
-    return this.$el.find(selector);
-  },
-
-  // Initialize is an empty function by default. Override it with your own
-  // initialization logic.
-  initialize: function(){},
-
-  // **render** is the core function that your view should override, in order
-  // to populate its element (`this.el`), with the appropriate HTML. The
-  // convention is for **render** to always return `this`.
-  render: function() {
-    return this;
-  },
-
-  // Clean up references to this view in order to prevent latent effects and
-  // memory leaks.
-  dispose: function() {
-    this.undelegateEvents();
-    if (this.model && this.model.off) this.model.off(null, null, this);
-    if (this.collection && this.collection.off) this.collection.off(null, null, this);
-    return this;
-  },
-
-  // Remove this view from the DOM. Note that the view isn't present in the
-  // DOM by default, so calling this method may be a no-op.
-  remove: function() {
-    this.dispose();
-    this.$el.remove();
-    return this;
-  },
-
-  // For small amounts of DOM Elements, where a full-blown template isn't
-  // needed, use **make** to manufacture elements, one at a time.
-  //
-  //     var el = this.make('li', {'class': 'row'}, this.model.escape('title'));
-  //
-  make: function(tagName, attributes, content) {
-    var el = document.createElement(tagName);
-    if (attributes) $(el).attr(attributes);
-    if (content != null) $(el).html(content);
-    return el;
-  },
-
-  // Change the view's element (`this.el` property), including event
-  // re-delegation.
-  setElement: function(element, delegate) {
-    if (this.$el) this.undelegateEvents();
-    this.$el = element instanceof $ ? element : $(element);
-    this.el = this.$el[0];
-    if (delegate !== false) this.delegateEvents();
-    return this;
-  },
-
-  // Set callbacks, where `this.events` is a hash of
-  //
-  // *{"event selector": "callback"}*
-  //
-  //     {
-  //       'mousedown .title':  'edit',
-  //       'click .button':     'save'
-  //       'click .open':       function(e) { ... }
-  //     }
-  //
-  // pairs. Callbacks will be bound to the view, with `this` set properly.
-  // Uses event delegation for efficiency.
-  // Omitting the selector binds the event to `this.el`.
-  // This only works for delegate-able events: not `focus`, `blur`, and
-  // not `change`, `submit`, and `reset` in Internet Explorer.
-  delegateEvents: function(events) {
-    if (!(events || (events = _.result(this, 'events')))) return;
-    this.undelegateEvents();
-    for (var key in events) {
-      var method = events[key];
-      if (!_.isFunction(method)) method = this[events[key]];
-      if (!method) throw new Error('Method "' + events[key] + '" does not exist');
-      var match = key.match(delegateEventSplitter);
-      var eventName = match[1], selector = match[2];
-      method = _.bind(method, this);
-      eventName += '.delegateEvents' + this.cid;
-      if (selector === '') {
-        this.$el.bind(eventName, method);
-      } else {
-        this.$el.delegate(selector, eventName, method);
-      }
-    }
-  },
-
-  // Clears all callbacks previously bound to the view with `delegateEvents`.
-  // You usually don't need to use this, but may wish to if you have multiple
-  // Backbone views attached to the same DOM element.
-  undelegateEvents: function() {
-    this.$el.unbind('.delegateEvents' + this.cid);
-  },
-
-  // Performs the initial configuration of a View with a set of options.
-  // Keys with special meaning *(model, collection, id, className)*, are
-  // attached directly to the view.
-  _configure: function(options) {
-    if (this.options) options = _.extend({}, this.options, options);
-    for (var i = 0, l = viewOptions.length; i < l; i++) {
-      var attr = viewOptions[i];
-      if (options[attr]) this[attr] = options[attr];
-    }
-    this.options = options;
-  },
-
-  // Ensure that the View has a DOM element to render into.
-  // If `this.el` is a string, pass it through `$()`, take the first
-  // matching element, and re-assign it to `el`. Otherwise, create
-  // an element from the `id`, `className` and `tagName` properties.
-  _ensureElement: function() {
-    if (!this.el) {
-      var attrs = _.extend({}, _.result(this, 'attributes'));
-      if (this.id) attrs.id = _.result(this, 'id');
-      if (this.className) attrs['class'] = _.result(this, 'className');
-      this.setElement(this.make(_.result(this, 'tagName'), attrs), false);
-    } else {
-      this.setElement(_.result(this, 'el'), false);
-    }
-  }
-
-});
-
-
-// Helpers
-// -------
-
-// Helper function to correctly set up the prototype chain, for subclasses.
-// Similar to `goog.inherits`, but uses a hash of prototype properties and
-// class properties to be extended.
-var extend = function(protoProps, staticProps) {
-  var parent = this;
-  var child;
-
-  // The constructor function for the new subclass is either defined by you
-  // (the "constructor" property in your `extend` definition), or defaulted
-  // by us to simply call the parent's constructor.
-  if (protoProps && _.has(protoProps, 'constructor')) {
-    child = protoProps.constructor;
-  } else {
-    child = function(){ parent.apply(this, arguments); };
-  }
-
-  // Add static properties to the constructor function, if supplied.
-  _.extend(child, parent, staticProps);
-
-  // Set the prototype chain to inherit from `parent`, without calling
-  // `parent`'s constructor function.
-  var Surrogate = function(){ this.constructor = child; };
-  Surrogate.prototype = parent.prototype;
-  child.prototype = new Surrogate;
-
-  // Add prototype properties (instance properties) to the subclass,
-  // if supplied.
-  if (protoProps) _.extend(child.prototype, protoProps);
-
-  // Set a convenience property in case the parent's prototype is needed
-  // later.
-  child.__super__ = parent.prototype;
-
-  return child;
-};
-
-module.exports.extend = extend
-
-});
-require.register("component-jquery/index.js", function(module, exports, require){
+};require.register("component-jquery/index.js", function(module, exports, require){
 /*!
  * jQuery JavaScript Library v1.7.3pre
  * http://jquery.com/
@@ -11100,6 +9591,1843 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 })( window );
 
 });
+require.register("component-underscore/index.js", function(module, exports, require){
+//     Underscore.js 1.3.3
+//     (c) 2009-2012 Jeremy Ashkenas, DocumentCloud Inc.
+//     Underscore is freely distributable under the MIT license.
+//     Portions of Underscore are inspired or borrowed from Prototype,
+//     Oliver Steele's Functional, and John Resig's Micro-Templating.
+//     For all details and documentation:
+//     http://documentcloud.github.com/underscore
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `global` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Establish the object that gets returned to break out of a loop iteration.
+  var breaker = {};
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var push             = ArrayProto.push,
+      slice            = ArrayProto.slice,
+      unshift          = ArrayProto.unshift,
+      toString         = ObjProto.toString,
+      hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeForEach      = ArrayProto.forEach,
+    nativeMap          = ArrayProto.map,
+    nativeReduce       = ArrayProto.reduce,
+    nativeReduceRight  = ArrayProto.reduceRight,
+    nativeFilter       = ArrayProto.filter,
+    nativeEvery        = ArrayProto.every,
+    nativeSome         = ArrayProto.some,
+    nativeIndexOf      = ArrayProto.indexOf,
+    nativeLastIndexOf  = ArrayProto.lastIndexOf,
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind;
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) { return new wrapper(obj); };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object via a string identifier,
+  // for Closure Compiler "advanced" mode.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root['_'] = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.3.3';
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles objects with the built-in `forEach`, arrays, and raw objects.
+  // Delegates to **ECMAScript 5**'s native `forEach` if available.
+  var each = _.each = _.forEach = function(obj, iterator, context) {
+    if (obj == null) return;
+    if (nativeForEach && obj.forEach === nativeForEach) {
+      obj.forEach(iterator, context);
+    } else if (obj.length === +obj.length) {
+      for (var i = 0, l = obj.length; i < l; i++) {
+        if (iterator.call(context, obj[i], i, obj) === breaker) return;
+      }
+    } else {
+      for (var key in obj) {
+        if (_.has(obj, key)) {
+          if (iterator.call(context, obj[key], key, obj) === breaker) return;
+        }
+      }
+    }
+  };
+
+  // Return the results of applying the iterator to each element.
+  // Delegates to **ECMAScript 5**'s native `map` if available.
+  _.map = _.collect = function(obj, iterator, context) {
+    var results = [];
+    if (obj == null) return results;
+    if (nativeMap && obj.map === nativeMap) return obj.map(iterator, context);
+    each(obj, function(value, index, list) {
+      results[results.length] = iterator.call(context, value, index, list);
+    });
+    return results;
+  };
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`. Delegates to **ECMAScript 5**'s native `reduce` if available.
+  _.reduce = _.foldl = _.inject = function(obj, iterator, memo, context) {
+    var initial = arguments.length > 2;
+    if (obj == null) obj = [];
+    if (nativeReduce && obj.reduce === nativeReduce) {
+      if (context) iterator = _.bind(iterator, context);
+      return initial ? obj.reduce(iterator, memo) : obj.reduce(iterator);
+    }
+    each(obj, function(value, index, list) {
+      if (!initial) {
+        memo = value;
+        initial = true;
+      } else {
+        memo = iterator.call(context, memo, value, index, list);
+      }
+    });
+    if (!initial) throw new TypeError('Reduce of empty array with no initial value');
+    return memo;
+  };
+
+  // The right-associative version of reduce, also known as `foldr`.
+  // Delegates to **ECMAScript 5**'s native `reduceRight` if available.
+  _.reduceRight = _.foldr = function(obj, iterator, memo, context) {
+    var initial = arguments.length > 2;
+    if (obj == null) obj = [];
+    if (nativeReduceRight && obj.reduceRight === nativeReduceRight) {
+      if (context) iterator = _.bind(iterator, context);
+      return initial ? obj.reduceRight(iterator, memo) : obj.reduceRight(iterator);
+    }
+    var reversed = _.toArray(obj).reverse();
+    if (context && !initial) iterator = _.bind(iterator, context);
+    return initial ? _.reduce(reversed, iterator, memo, context) : _.reduce(reversed, iterator);
+  };
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, iterator, context) {
+    var result;
+    any(obj, function(value, index, list) {
+      if (iterator.call(context, value, index, list)) {
+        result = value;
+        return true;
+      }
+    });
+    return result;
+  };
+
+  // Return all the elements that pass a truth test.
+  // Delegates to **ECMAScript 5**'s native `filter` if available.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, iterator, context) {
+    var results = [];
+    if (obj == null) return results;
+    if (nativeFilter && obj.filter === nativeFilter) return obj.filter(iterator, context);
+    each(obj, function(value, index, list) {
+      if (iterator.call(context, value, index, list)) results[results.length] = value;
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, iterator, context) {
+    var results = [];
+    if (obj == null) return results;
+    each(obj, function(value, index, list) {
+      if (!iterator.call(context, value, index, list)) results[results.length] = value;
+    });
+    return results;
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Delegates to **ECMAScript 5**'s native `every` if available.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, iterator, context) {
+    var result = true;
+    if (obj == null) return result;
+    if (nativeEvery && obj.every === nativeEvery) return obj.every(iterator, context);
+    each(obj, function(value, index, list) {
+      if (!(result = result && iterator.call(context, value, index, list))) return breaker;
+    });
+    return !!result;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Delegates to **ECMAScript 5**'s native `some` if available.
+  // Aliased as `any`.
+  var any = _.some = _.any = function(obj, iterator, context) {
+    iterator || (iterator = _.identity);
+    var result = false;
+    if (obj == null) return result;
+    if (nativeSome && obj.some === nativeSome) return obj.some(iterator, context);
+    each(obj, function(value, index, list) {
+      if (result || (result = iterator.call(context, value, index, list))) return breaker;
+    });
+    return !!result;
+  };
+
+  // Determine if a given value is included in the array or object using `===`.
+  // Aliased as `contains`.
+  _.include = _.contains = function(obj, target) {
+    var found = false;
+    if (obj == null) return found;
+    if (nativeIndexOf && obj.indexOf === nativeIndexOf) return obj.indexOf(target) != -1;
+    found = any(obj, function(value) {
+      return value === target;
+    });
+    return found;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    return _.map(obj, function(value) {
+      return (_.isFunction(method) ? method : value[method]).apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, function(value){ return value[key]; });
+  };
+
+  // Return the maximum element or (element-based computation).
+  // Can't optimize arrays of integers longer than 65,535 elements.
+  // See: https://bugs.webkit.org/show_bug.cgi?id=80797
+  _.max = function(obj, iterator, context) {
+    if (!iterator && _.isArray(obj) && obj[0] === +obj[0] && obj.length < 65535) {
+      return Math.max.apply(Math, obj);
+    }
+    if (!iterator && _.isEmpty(obj)) return -Infinity;
+    var result = {computed : -Infinity};
+    each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      computed >= result.computed && (result = {value : value, computed : computed});
+    });
+    return result.value;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iterator, context) {
+    if (!iterator && _.isArray(obj) && obj[0] === +obj[0] && obj.length < 65535) {
+      return Math.min.apply(Math, obj);
+    }
+    if (!iterator && _.isEmpty(obj)) return Infinity;
+    var result = {computed : Infinity};
+    each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      computed < result.computed && (result = {value : value, computed : computed});
+    });
+    return result.value;
+  };
+
+  // Shuffle an array.
+  _.shuffle = function(obj) {
+    var rand;
+    var index = 0;
+    var shuffled = [];
+    each(obj, function(value) {
+      rand = Math.floor(Math.random() * ++index);
+      shuffled[index - 1] = shuffled[rand];
+      shuffled[rand] = value;
+    });
+    return shuffled;
+  };
+
+  // Sort the object's values by a criterion produced by an iterator.
+  _.sortBy = function(obj, val, context) {
+    var iterator = lookupIterator(obj, val);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value : value,
+        criteria : iterator.call(context, value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria, b = right.criteria;
+      if (a === void 0) return 1;
+      if (b === void 0) return -1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    }), 'value');
+  };
+
+  // An internal function to generate lookup iterators.
+  var lookupIterator = function(obj, val) {
+    return _.isFunction(val) ? val : function(obj) { return obj[val]; };
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(obj, val, behavior) {
+    var result = {};
+    var iterator = lookupIterator(obj, val);
+    each(obj, function(value, index) {
+      var key = iterator(value, index);
+      behavior(result, key, value);
+    });
+    return result;
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = function(obj, val) {
+    return group(obj, val, function(result, key, value) {
+      (result[key] || (result[key] = [])).push(value);
+    });
+  };
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = function(obj, val) {
+    return group(obj, val, function(result, key, value) {
+      result[key] || (result[key] = 0);
+      result[key]++;
+    });
+  };
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iterator) {
+    iterator || (iterator = _.identity);
+    var value = iterator(obj);
+    var low = 0, high = array.length;
+    while (low < high) {
+      var mid = (low + high) >> 1;
+      iterator(array[mid]) < value ? low = mid + 1 : high = mid;
+    }
+    return low;
+  };
+
+  // Safely convert anything iterable into a real, live array.
+  _.toArray = function(obj) {
+    if (!obj)                                     return [];
+    if (_.isArray(obj))                           return slice.call(obj);
+    if (_.isArguments(obj))                       return slice.call(obj);
+    if (obj.toArray && _.isFunction(obj.toArray)) return obj.toArray();
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    return _.isArray(obj) ? obj.length : _.keys(obj).length;
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    return (n != null) && !guard ? slice.call(array, 0, n) : array[0];
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N. The **guard** check allows it to work with
+  // `_.map`.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, array.length - ((n == null) || guard ? 1 : n));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array. The **guard** check allows it to work with `_.map`.
+  _.last = function(array, n, guard) {
+    if ((n != null) && !guard) {
+      return slice.call(array, Math.max(array.length - n, 0));
+    } else {
+      return array[array.length - 1];
+    }
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail`.
+  // Especially useful on the arguments object. Passing an **index** will return
+  // the rest of the values in the array from that index onward. The **guard**
+  // check allows it to work with `_.map`.
+  _.rest = _.tail = function(array, index, guard) {
+    return slice.call(array, (index == null) || guard ? 1 : index);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, function(value){ return !!value; });
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, output) {
+    each(input, function(value) {
+      if (_.isArray(value)) {
+        shallow ? push.apply(output, value) : flatten(value, shallow, output);
+      } else {
+        output.push(value);
+      }
+    });
+    return output;
+  };
+
+  // Return a completely flattened version of an array.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, []);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iterator) {
+    var initial = iterator ? _.map(array, iterator) : array;
+    var results = [];
+    _.reduce(initial, function(memo, value, index) {
+      if (isSorted ? (_.last(memo) !== value || !memo.length) : !_.include(memo, value)) {
+        memo.push(value);
+        results.push(array[index]);
+      }
+      return memo;
+    }, []);
+    return results;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(flatten(arguments, true, []));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    var rest = slice.call(arguments, 1);
+    return _.filter(_.uniq(array), function(item) {
+      return _.every(rest, function(other) {
+        return _.indexOf(other, item) >= 0;
+      });
+    });
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = flatten(slice.call(arguments, 1), true, []);
+    return _.filter(array, function(value){ return !_.include(rest, value); });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    var args = slice.call(arguments);
+    var length = _.max(_.pluck(args, 'length'));
+    var results = new Array(length);
+    for (var i = 0; i < length; i++) {
+      results[i] = _.pluck(args, "" + i);
+    }
+    return results;
+  };
+
+  // Zip together two arrays -- an array of keys and an array of values -- into
+  // a single object.
+  _.zipObject = function(keys, values) {
+    var result = {};
+    for (var i = 0, l = keys.length; i < l; i++) {
+      result[keys[i]] = values[i];
+    }
+    return result;
+  };
+
+  // If the browser doesn't supply us with indexOf (I'm looking at you, **MSIE**),
+  // we need this function. Return the position of the first occurrence of an
+  // item in an array, or -1 if the item is not included in the array.
+  // Delegates to **ECMAScript 5**'s native `indexOf` if available.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = function(array, item, isSorted) {
+    if (array == null) return -1;
+    var i, l;
+    if (isSorted) {
+      i = _.sortedIndex(array, item);
+      return array[i] === item ? i : -1;
+    }
+    if (nativeIndexOf && array.indexOf === nativeIndexOf) return array.indexOf(item);
+    for (i = 0, l = array.length; i < l; i++) if (array[i] === item) return i;
+    return -1;
+  };
+
+  // Delegates to **ECMAScript 5**'s native `lastIndexOf` if available.
+  _.lastIndexOf = function(array, item) {
+    if (array == null) return -1;
+    if (nativeLastIndexOf && array.lastIndexOf === nativeLastIndexOf) return array.lastIndexOf(item);
+    var i = array.length;
+    while (i--) if (array[i] === item) return i;
+    return -1;
+  };
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (arguments.length <= 1) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = arguments[2] || 1;
+
+    var len = Math.max(Math.ceil((stop - start) / step), 0);
+    var idx = 0;
+    var range = new Array(len);
+
+    while(idx < len) {
+      range[idx++] = start;
+      start += step;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Reusable constructor function for prototype setting.
+  var ctor = function(){};
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Binding with arguments is also known as `curry`.
+  // Delegates to **ECMAScript 5**'s native `Function.bind` if available.
+  // We check for `func.bind` first, to fail fast when `func` is undefined.
+  _.bind = function bind(func, context) {
+    var bound, args;
+    if (func.bind === nativeBind && nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError;
+    args = slice.call(arguments, 2);
+    return bound = function() {
+      if (!(this instanceof bound)) return func.apply(context, args.concat(slice.call(arguments)));
+      ctor.prototype = func.prototype;
+      var self = new ctor;
+      var result = func.apply(self, args.concat(slice.call(arguments)));
+      if (Object(result) === result) return result;
+      return self;
+    };
+  };
+
+  // Bind all of an object's methods to that object. Useful for ensuring that
+  // all callbacks defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var funcs = slice.call(arguments, 1);
+    if (funcs.length == 0) funcs = _.functions(obj);
+    each(funcs, function(f) { obj[f] = _.bind(obj[f], obj); });
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memo = {};
+    hasher || (hasher = _.identity);
+    return function() {
+      var key = hasher.apply(this, arguments);
+      return _.has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
+    };
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){ return func.apply(null, args); }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = function(func) {
+    return _.delay.apply(_, [func, 1].concat(slice.call(arguments, 1)));
+  };
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time.
+  _.throttle = function(func, wait) {
+    var context, args, timeout, throttling, more, result;
+    var whenDone = _.debounce(function(){ more = throttling = false; }, wait);
+    return function() {
+      context = this; args = arguments;
+      var later = function() {
+        timeout = null;
+        if (more) func.apply(context, args);
+        whenDone();
+      };
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (throttling) {
+        more = true;
+      } else {
+        throttling = true;
+        result = func.apply(context, args);
+      }
+      whenDone();
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout;
+    return function() {
+      var context = this, args = arguments;
+      var later = function() {
+        timeout = null;
+        if (!immediate) func.apply(context, args);
+      };
+      var callNow = immediate && !timeout;
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+      if (callNow) func.apply(context, args);
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = function(func) {
+    var ran = false, memo;
+    return function() {
+      if (ran) return memo;
+      ran = true;
+      return memo = func.apply(this, arguments);
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return function() {
+      var args = [func].concat(slice.call(arguments, 0));
+      return wrapper.apply(this, args);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var funcs = arguments;
+    return function() {
+      var args = arguments;
+      for (var i = funcs.length - 1; i >= 0; i--) {
+        args = [funcs[i].apply(this, args)];
+      }
+      return args[0];
+    };
+  };
+
+  // Returns a function that will only be executed after being called N times.
+  _.after = function(times, func) {
+    if (times <= 0) return func();
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Object Functions
+  // ----------------
+
+  // Retrieve the names of an object's properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = nativeKeys || function(obj) {
+    if (obj !== Object(obj)) throw new TypeError('Invalid object');
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys[keys.length] = key;
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    return _.map(obj, _.identity);
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = function(obj) {
+    each(slice.call(arguments, 1), function(source) {
+      for (var prop in source) {
+        obj[prop] = source[prop];
+      }
+    });
+    return obj;
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(obj) {
+    var result = {};
+    each(flatten(slice.call(arguments, 1), true, []), function(key) {
+      if (key in obj) result[key] = obj[key];
+    });
+    return result;
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = function(obj) {
+    each(slice.call(arguments, 1), function(source) {
+      for (var prop in source) {
+        if (obj[prop] == null) obj[prop] = source[prop];
+      }
+    });
+    return obj;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, stack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the Harmony `egal` proposal: http://wiki.ecmascript.org/doku.php?id=harmony:egal.
+    if (a === b) return a !== 0 || 1 / a == 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a._chain) a = a._wrapped;
+    if (b._chain) b = b._wrapped;
+    // Invoke a custom `isEqual` method if one is provided.
+    if (a.isEqual && _.isFunction(a.isEqual)) return a.isEqual(b);
+    if (b.isEqual && _.isFunction(b.isEqual)) return b.isEqual(a);
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className != toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, dates, and booleans are compared by value.
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return a == String(b);
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive. An `egal` comparison is performed for
+        // other numeric values.
+        return a != +a ? b != +b : (a == 0 ? 1 / a == 1 / b : a == +b);
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a == +b;
+      // RegExps are compared by their source patterns and flags.
+      case '[object RegExp]':
+        return a.source == b.source &&
+               a.global == b.global &&
+               a.multiline == b.multiline &&
+               a.ignoreCase == b.ignoreCase;
+    }
+    if (typeof a != 'object' || typeof b != 'object') return false;
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+    var length = stack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (stack[length] == a) return true;
+    }
+    // Add the first object to the stack of traversed objects.
+    stack.push(a);
+    var size = 0, result = true;
+    // Recursively compare objects and arrays.
+    if (className == '[object Array]') {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      size = a.length;
+      result = size == b.length;
+      if (result) {
+        // Deep compare the contents, ignoring non-numeric properties.
+        while (size--) {
+          // Ensure commutative equality for sparse arrays.
+          if (!(result = size in a == size in b && eq(a[size], b[size], stack))) break;
+        }
+      }
+    } else {
+      // Objects with different constructors are not equivalent.
+      if ('constructor' in a != 'constructor' in b || a.constructor != b.constructor) return false;
+      // Deep compare objects.
+      for (var key in a) {
+        if (_.has(a, key)) {
+          // Count the expected number of properties.
+          size++;
+          // Deep compare each member.
+          if (!(result = _.has(b, key) && eq(a[key], b[key], stack))) break;
+        }
+      }
+      // Ensure that both objects contain the same number of properties.
+      if (result) {
+        for (key in b) {
+          if (_.has(b, key) && !(size--)) break;
+        }
+        result = !size;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    stack.pop();
+    return result;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b, []);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (_.isArray(obj) || _.isString(obj)) return obj.length === 0;
+    for (var key in obj) if (_.has(obj, key)) return false;
+    return true;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType == 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) == '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    return obj === Object(obj);
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp.
+  each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) == '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return !!(obj && _.has(obj, 'callee'));
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return _.isNumber(obj) && isFinite(obj);
+  };
+
+  // Is the given value `NaN`?
+  _.isNaN = function(obj) {
+    // `NaN` is the only value for which `===` is not reflexive.
+    return obj !== obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) == '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iterators.
+  _.identity = function(value) {
+    return value;
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iterator, context) {
+    for (var i = 0; i < n; i++) iterator.call(context, i);
+  };
+
+  // List of HTML entities for escaping.
+  var htmlEscapes = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;'
+  };
+
+  // Regex containing the keys listed immediately above.
+  var htmlEscaper = /[&<>"'\/]/g;
+
+  // Escape a string for HTML interpolation.
+  _.escape = function(string) {
+    return ('' + string).replace(htmlEscaper, function(match) {
+      return htmlEscapes[match];
+    });
+  };
+
+  // If the value of the named property is a function then invoke it;
+  // otherwise, return it.
+  _.result = function(object, property) {
+    if (object == null) return null;
+    var value = object[property];
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Add your own custom functions to the Underscore object, ensuring that
+  // they're correctly added to the OOP wrapper as well.
+  _.mixin = function(obj) {
+    each(_.functions(obj), function(name){
+      addToWrapper(name, _[name] = obj[name]);
+    });
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = idCounter++;
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /.^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    '\\':   '\\',
+    "'":    "'",
+    r:      '\r',
+    n:      '\n',
+    t:      '\t',
+    u2028:  '\u2028',
+    u2029:  '\u2029'
+  };
+
+  for (var key in escapes) escapes[escapes[key]] = key;
+  var escaper = /\\|'|\r|\n|\t|\u2028|\u2029/g;
+  var unescaper = /\\(\\|'|r|n|t|u2028|u2029)/g;
+
+  // Within an interpolation, evaluation, or escaping, remove HTML escaping
+  // that had been previously added.
+  var unescape = function(code) {
+    return code.replace(unescaper, function(match, escape) {
+      return escapes[escape];
+    });
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  _.template = function(text, data, settings) {
+    settings = _.defaults(settings || {}, _.templateSettings);
+
+    // Compile the template source, taking care to escape characters that
+    // cannot be included in a string literal and then unescape them in code
+    // blocks.
+    var source = "__p+='" + text
+      .replace(escaper, function(match) {
+        return '\\' + escapes[match];
+      })
+      .replace(settings.escape || noMatch, function(match, code) {
+        return "'+\n((__t=(" + unescape(code) + "))==null?'':_.escape(__t))+\n'";
+      })
+      .replace(settings.interpolate || noMatch, function(match, code) {
+        return "'+\n((__t=(" + unescape(code) + "))==null?'':__t)+\n'";
+      })
+      .replace(settings.evaluate || noMatch, function(match, code) {
+        return "';\n" + unescape(code) + "\n__p+='";
+      }) + "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'')};\n" +
+      source + "return __p;\n";
+
+    var render = new Function(settings.variable || 'obj', '_', source);
+    if (data) return render(data, _);
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled function source as a convenience for precompilation.
+    template.source = 'function(' + (settings.variable || 'obj') + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function, which will delegate to the wrapper.
+  _.chain = function(obj) {
+    return _(obj).chain();
+  };
+
+  // The OOP Wrapper
+  // ---------------
+
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+  var wrapper = function(obj) { this._wrapped = obj; };
+
+  // Expose `wrapper.prototype` as `_.prototype`
+  _.prototype = wrapper.prototype;
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(obj, chain) {
+    return chain ? _(obj).chain() : obj;
+  };
+
+  // A method to easily add functions to the OOP wrapper.
+  var addToWrapper = function(name, func) {
+    wrapper.prototype[name] = function() {
+      var args = slice.call(arguments);
+      unshift.call(args, this._wrapped);
+      return result(func.apply(_, args), this._chain);
+    };
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    wrapper.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name == 'shift' || name == 'splice') && obj.length === 0) delete obj[0];
+      return result(obj, this._chain);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    wrapper.prototype[name] = function() {
+      return result(method.apply(this._wrapped, arguments), this._chain);
+    };
+  });
+
+  // Start chaining a wrapped Underscore object.
+  wrapper.prototype.chain = function() {
+    this._chain = true;
+    return this;
+  };
+
+  // Extracts the result from a wrapped and chained object.
+  wrapper.prototype.value = function() {
+    return this._wrapped;
+  };
+
+}).call(this);
+
+});
+require.register("component-object/index.js", function(module, exports, require){
+
+/**
+ * HOP ref.
+ */
+
+var has = Object.prototype.hasOwnProperty;
+
+/**
+ * Return own keys in `obj`.
+ *
+ * @param {Object} obj
+ * @return {Array}
+ * @api public
+ */
+
+exports.keys = Object.keys || function(obj){
+  var keys = [];
+  for (var key in obj) {
+    if (has.call(obj, key)) {
+      keys.push(key);
+    }
+  }
+  return keys;
+};
+
+/**
+ * Return own values in `obj`.
+ *
+ * @param {Object} obj
+ * @return {Array}
+ * @api public
+ */
+
+exports.values = function(obj){
+  var vals = [];
+  for (var key in obj) {
+    if (has.call(obj, key)) {
+      vals.push(obj[key]);
+    }
+  }
+  return vals;
+};
+
+/**
+ * Merge `b` into `a`.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @return {Object} a
+ * @api public
+ */
+
+exports.merge = function(a, b){
+  for (var key in b) {
+    if (has.call(b, key)) {
+      a[key] = b[key];
+    }
+  }
+  return a;
+};
+
+/**
+ * Return length of `obj`.
+ *
+ * @param {Object} obj
+ * @return {Number}
+ * @api public
+ */
+
+exports.length = function(obj){
+  return exports.keys(obj).length;
+};
+
+/**
+ * Check if `obj` is empty.
+ *
+ * @param {Object} obj
+ * @return {Boolean}
+ * @api public
+ */
+
+exports.isEmpty = function(obj){
+  return 0 == exports.length(obj);
+};
+});
+require.register("timoxley-backbone-events/index.js", function(module, exports, require){
+// Backbone.Events
+// -----------------
+
+var object = require('object')
+
+// Regular expression used to split event strings
+var eventSplitter = /\s+/;
+
+// A module that can be mixed in to *any object* in order to provide it with
+// custom events. You may bind with `on` or remove with `off` callback functions
+// to an event; `trigger`-ing an event fires all callbacks in succession.
+//
+//     var object = {};
+//     _.extend(object, Backbone.Events);
+//     object.on('expand', function(){ alert('expanded'); });
+//     object.trigger('expand');
+//
+var Events = module.exports = {
+
+  // Bind one or more space separated events, `events`, to a `callback`
+  // function. Passing `"all"` will bind the callback to all events fired.
+  on: function(events, callback, context) {
+    var calls, event, list;
+    if (!callback) return this;
+
+    events = events.split(eventSplitter);
+    calls = this._callbacks || (this._callbacks = {});
+
+    while (event = events.shift()) {
+      list = calls[event] || (calls[event] = []);
+      list.push(callback, context);
+    }
+
+    return this;
+  },
+
+  // Remove one or many callbacks. If `context` is null, removes all callbacks
+  // with that function. If `callback` is null, removes all callbacks for the
+  // event. If `events` is null, removes all bound callbacks for all events.
+  off: function(events, callback, context) {
+    var event, calls, list, i;
+
+    // No events, or removing *all* events.
+    if (!(calls = this._callbacks)) return this;
+    if (!(events || callback || context)) {
+      delete this._callbacks;
+      return this;
+    }
+
+    events = events ? events.split(eventSplitter) : object.keys(calls);
+
+    // Loop through the callback list, splicing where appropriate.
+    while (event = events.shift()) {
+      if (!(list = calls[event]) || !(callback || context)) {
+        delete calls[event];
+        continue;
+      }
+
+      for (i = list.length - 2; i >= 0; i -= 2) {
+        if (!(callback && list[i] !== callback || context && list[i + 1] !== context)) {
+          list.splice(i, 2);
+        }
+      }
+    }
+
+    return this;
+  },
+
+  // Trigger one or many events, firing all bound callbacks. Callbacks are
+  // passed the same arguments as `trigger` is, apart from the event name
+  // (unless you're listening on `"all"`, which will cause your callback to
+  // receive the true name of the event as the first argument).
+  trigger: function(events) {
+    var event, calls, list, i, length, args, all, rest;
+    if (!(calls = this._callbacks)) return this;
+
+    rest = [];
+    events = events.split(eventSplitter);
+
+    // Fill up `rest` with the callback arguments.  Since we're only copying
+    // the tail of `arguments`, a loop is much faster than Array#slice.
+    for (i = 1, length = arguments.length; i < length; i++) {
+      rest[i - 1] = arguments[i];
+    }
+
+    // For each event, walk through the list of callbacks twice, first to
+    // trigger the event, then to trigger any `"all"` callbacks.
+    while (event = events.shift()) {
+      // Copy callback lists to prevent modification.
+      if (all = calls.all) all = all.slice();
+      if (list = calls[event]) list = list.slice();
+
+      // Execute event callbacks.
+      if (list) {
+        for (i = 0, length = list.length; i < length; i += 2) {
+          list[i].apply(list[i + 1] || this, rest);
+        }
+      }
+
+      // Execute "all" callbacks.
+      if (all) {
+        args = [event].concat(rest);
+        for (i = 0, length = all.length; i < length; i += 2) {
+          all[i].apply(all[i + 1] || this, args);
+        }
+      }
+    }
+
+    return this;
+  }
+
+};
+
+// Aliases for backwards compatibility.
+Events.bind   = Events.on;
+Events.unbind = Events.off;
+
+});
+require.register("spini-backbone-history/index.js", function(module, exports, require){
+// Backbone.History
+// ----------------
+
+var _ = require('underscore');
+var $ = require('jquery');
+var Events = require('backbone-events');
+
+// Handles cross-browser history management, based on URL fragments. If the
+// browser does not support `onhashchange`, falls back to polling.
+var History = module.exports = function() {
+  this.handlers = [];
+  _.bindAll(this, 'checkUrl');
+};
+
+// Cached regex for cleaning leading hashes and slashes .
+var routeStripper = /^[#\/]/;
+
+// Cached regex for detecting MSIE.
+var isExplorer = /msie [\w.]+/;
+
+// Has the history handling already been started?
+History.started = false;
+
+// Set up all inheritable **Backbone.History** properties and methods.
+_.extend(History.prototype, Events, {
+
+  // The default interval to poll for hash changes, if necessary, is
+  // twenty times a second.
+  interval: 50,
+
+  // Gets the true hash value. Cannot use location.hash directly due to bug
+  // in Firefox where location.hash will always be decoded.
+  getHash: function(windowOverride) {
+    var loc = windowOverride ? windowOverride.location : window.location;
+    var match = loc.href.match(/#(.*)$/);
+    return match ? match[1] : '';
+  },
+
+  // Get the cross-browser normalized URL fragment, either from the URL,
+  // the hash, or the override.
+  getFragment: function(fragment, forcePushState) {
+    if (fragment == null) {
+      if (this._hasPushState || forcePushState) {
+        fragment = window.location.pathname;
+        var search = window.location.search;
+        if (search) fragment += search;
+      } else {
+        fragment = this.getHash();
+      }
+    }
+    if (!fragment.indexOf(this.options.root)) fragment = fragment.substr(this.options.root.length);
+    return fragment.replace(routeStripper, '');
+  },
+
+  // Start the hash change handling, returning `true` if the current URL matches
+  // an existing route, and `false` otherwise.
+  start: function(options) {
+    if (History.started) throw new Error("Backbone.history has already been started");
+    History.started = true;
+
+    // Figure out the initial configuration. Do we need an iframe?
+    // Is pushState desired ... is it available?
+    this.options          = _.extend({}, {root: '/'}, this.options, options);
+    this._wantsHashChange = this.options.hashChange !== false;
+    this._wantsPushState  = !!this.options.pushState;
+    this._hasPushState    = !!(this.options.pushState && window.history && window.history.pushState);
+    var fragment          = this.getFragment();
+    var docMode           = document.documentMode;
+    var oldIE             = (isExplorer.exec(navigator.userAgent.toLowerCase()) && (!docMode || docMode <= 7));
+
+    if (oldIE) {
+      this.iframe = $('<iframe src="javascript:0" tabindex="-1" />').hide().appendTo('body')[0].contentWindow;
+      this.navigate(fragment);
+    }
+
+    // Depending on whether we're using pushState or hashes, and whether
+    // 'onhashchange' is supported, determine how we check the URL state.
+    if (this._hasPushState) {
+      $(window).bind('popstate', this.checkUrl);
+    } else if (this._wantsHashChange && ('onhashchange' in window) && !oldIE) {
+      $(window).bind('hashchange', this.checkUrl);
+    } else if (this._wantsHashChange) {
+      this._checkUrlInterval = setInterval(this.checkUrl, this.interval);
+    }
+
+    // Determine if we need to change the base url, for a pushState link
+    // opened by a non-pushState browser.
+    this.fragment = fragment;
+    var loc = window.location;
+    var atRoot  = loc.pathname == this.options.root;
+
+    // If we've started off with a route from a `pushState`-enabled browser,
+    // but we're currently in a browser that doesn't support it...
+    if (this._wantsHashChange && this._wantsPushState && !this._hasPushState && !atRoot) {
+      this.fragment = this.getFragment(null, true);
+      window.location.replace(this.options.root + '#' + this.fragment);
+      // Return immediately as browser will do redirect to new url
+      return true;
+
+    // Or if we've started out with a hash-based route, but we're currently
+    // in a browser where it could be `pushState`-based instead...
+    } else if (this._wantsPushState && this._hasPushState && atRoot && loc.hash) {
+      this.fragment = this.getHash().replace(routeStripper, '');
+      window.history.replaceState({}, document.title, loc.protocol + '//' + loc.host + this.options.root + this.fragment);
+    }
+
+    if (!this.options.silent) {
+      return this.loadUrl();
+    }
+  },
+
+  // Disable Backbone.history, perhaps temporarily. Not useful in a real app,
+  // but possibly useful for unit testing Routers.
+  stop: function() {
+    $(window).unbind('popstate', this.checkUrl).unbind('hashchange', this.checkUrl);
+    clearInterval(this._checkUrlInterval);
+    History.started = false;
+  },
+
+  // Add a route to be tested when the fragment changes. Routes added later
+  // may override previous routes.
+  route: function(route, callback) {
+    this.handlers.unshift({route: route, callback: callback});
+  },
+
+  // Checks the current URL to see if it has changed, and if it has,
+  // calls `loadUrl`, normalizing across the hidden iframe.
+  checkUrl: function(e) {
+    var current = this.getFragment();
+    if (current == this.fragment && this.iframe) current = this.getFragment(this.getHash(this.iframe));
+    if (current == this.fragment) return false;
+    if (this.iframe) this.navigate(current);
+    this.loadUrl() || this.loadUrl(this.getHash());
+  },
+
+  // Attempt to load the current URL fragment. If a route succeeds with a
+  // match, returns `true`. If no defined routes matches the fragment,
+  // returns `false`.
+  loadUrl: function(fragmentOverride) {
+    var fragment = this.fragment = this.getFragment(fragmentOverride);
+    var matched = _.any(this.handlers, function(handler) {
+      if (handler.route.test(fragment)) {
+        handler.callback(fragment);
+        return true;
+      }
+    });
+    return matched;
+  },
+
+  // Save a fragment into the hash history, or replace the URL state if the
+  // 'replace' option is passed. You are responsible for properly URL-encoding
+  // the fragment in advance.
+  //
+  // The options object can contain `trigger: true` if you wish to have the
+  // route callback be fired (not usually desirable), or `replace: true`, if
+  // you wish to modify the current URL without adding an entry to the history.
+  navigate: function(fragment, options) {
+    if (!History.started) return false;
+    if (!options || options === true) options = {trigger: options};
+    var frag = (fragment || '').replace(routeStripper, '');
+    if (this.fragment == frag) return;
+
+    // If pushState is available, we use it to set the fragment as a real URL.
+    if (this._hasPushState) {
+      if (frag.indexOf(this.options.root) != 0) frag = this.options.root + frag;
+      this.fragment = frag;
+      window.history[options.replace ? 'replaceState' : 'pushState']({}, document.title, frag);
+
+    // If hash changes haven't been explicitly disabled, update the hash
+    // fragment to store history.
+    } else if (this._wantsHashChange) {
+      this.fragment = frag;
+      this._updateHash(window.location, frag, options.replace);
+      if (this.iframe && (frag != this.getFragment(this.getHash(this.iframe)))) {
+        // Opening and closing the iframe tricks IE7 and earlier to push a history entry on hash-tag change.
+        // When replace is true, we don't want this.
+        if(!options.replace) this.iframe.document.open().close();
+        this._updateHash(this.iframe.location, frag, options.replace);
+      }
+
+    // If you've told us that you explicitly don't want fallback hashchange-
+    // based history, then `navigate` becomes a page refresh.
+    } else {
+      window.location.assign(this.options.root + fragment);
+    }
+    if (options.trigger) this.loadUrl(fragment);
+  },
+
+  // Update the hash location, either replacing the current entry, or adding
+  // a new one to the browser history.
+  _updateHash: function(location, fragment, replace) {
+    if (replace) {
+      location.replace(location.toString().replace(/(javascript:|#).*$/, '') + '#' + fragment);
+    } else {
+      location.hash = fragment;
+    }
+  }
+});
+
+});
+require.register("spini-backbone-router/index.js", function(module, exports, require){
+// Backbone.Router
+// -------------------
+
+var _ = require('underscore');
+var Events = require('backbone-events');
+var History = require('backbone-history');
+
+// Routers map faux-URLs to actions, and fire events when routes are
+// matched. Creating a new one sets its `routes` hash, if not set statically.
+var Router = module.exports = function(options) {
+  options || (options = {});
+  if (options.routes) this.routes = options.routes;
+  this._bindRoutes();
+  this.initialize.apply(this, arguments);
+};
+
+// Cached regular expressions for matching named param parts and splatted
+// parts of route strings.
+var namedParam    = /:\w+/g;
+var splatParam    = /\*\w+/g;
+var escapeRegExp  = /[-[\]{}()+?.,\\^$|#\s]/g;
+
+// Set up all inheritable **Router** properties and methods.
+_.extend(Router.prototype, Events, {
+
+  // Initialize is an empty function by default. Override it with your own
+  // initialization logic.
+  initialize: function(){},
+
+  // Manually bind a single named route to a callback. For example:
+  //
+  //     this.route('search/:query/p:num', 'search', function(query, num) {
+  //       ...
+  //     });
+  //
+  route: function(route, name, callback) {
+    Router.history || (Router.history = new History);
+    if (!_.isRegExp(route)) route = this._routeToRegExp(route);
+    if (!callback) callback = this[name];
+    Router.history.route(route, _.bind(function(fragment) {
+      var args = this._extractParameters(route, fragment);
+      callback && callback.apply(this, args);
+      this.trigger.apply(this, ['route:' + name].concat(args));
+      Router.history.trigger('route', this, name, args);
+    }, this));
+    return this;
+  },
+
+  // Simple proxy to `Router.history` to save a fragment into the history.
+  navigate: function(fragment, options) {
+    Router.history.navigate(fragment, options);
+  },
+
+  // Bind all defined routes to `Router.history`. We have to reverse the
+  // order of the routes here to support behavior where the most general
+  // routes can be defined at the bottom of the route map.
+  _bindRoutes: function() {
+    if (!this.routes) return;
+    var routes = [];
+    for (var route in this.routes) {
+      routes.unshift([route, this.routes[route]]);
+    }
+    for (var i = 0, l = routes.length; i < l; i++) {
+      this.route(routes[i][0], routes[i][1], this[routes[i][1]]);
+    }
+  },
+
+  // Convert a route string into a regular expression, suitable for matching
+  // against the current location hash.
+  _routeToRegExp: function(route) {
+    route = route.replace(escapeRegExp, '\\$&')
+                 .replace(namedParam, '([^\/]+)')
+                 .replace(splatParam, '(.*?)');
+    return new RegExp('^' + route + '$');
+  },
+
+  // Given a route, and a URL fragment that it matches, return the array of
+  // extracted parameters.
+  _extractParameters: function(route, fragment) {
+    return route.exec(fragment).slice(1);
+  }
+
+});
+
+// Helpers
+// -------
+
+// Helper function to correctly set up the prototype chain, for subclasses.
+// Similar to `goog.inherits`, but uses a hash of prototype properties and
+// class properties to be extended.
+var extend = function(protoProps, staticProps) {
+  var parent = this;
+  var child;
+
+  // The constructor function for the new subclass is either defined by you
+  // (the "constructor" property in your `extend` definition), or defaulted
+  // by us to simply call the parent's constructor.
+  if (protoProps && _.has(protoProps, 'constructor')) {
+    child = protoProps.constructor;
+  } else {
+    child = function(){ parent.apply(this, arguments); };
+  }
+
+  // Add static properties to the constructor function, if supplied.
+  _.extend(child, parent, staticProps);
+
+  // Set the prototype chain to inherit from `parent`, without calling
+  // `parent`'s constructor function.
+  var Surrogate = function(){ this.constructor = child; };
+  Surrogate.prototype = parent.prototype;
+  child.prototype = new Surrogate;
+
+  // Add prototype properties (instance properties) to the subclass,
+  // if supplied.
+  if (protoProps) _.extend(child.prototype, protoProps);
+
+  // Set a convenience property in case the parent's prototype is needed
+  // later.
+  child.__super__ = parent.prototype;
+
+  return child;
+};
+
+module.exports.extend = extend;
+
+});
+require.register("timoxley-backbone-view/index.js", function(module, exports, require){
+// Backbone.View
+// -------------
+var _ = require('underscore')
+var $ = require('jquery')
+var Events = require('backbone-events')
+
+// Creating a Backbone.View creates its initial element outside of the DOM,
+// if an existing element is not provided...
+var View = module.exports = function(options) {
+  this.cid = _.uniqueId('view');
+  this._configure(options || {});
+  this._ensureElement();
+  this.initialize.apply(this, arguments);
+  this.delegateEvents();
+};
+// Cached regex to split keys for `delegate`.
+var delegateEventSplitter = /^(\S+)\s*(.*)$/;
+
+// List of view options to be merged as properties.
+var viewOptions = ['model', 'collection', 'el', 'id', 'attributes', 'className', 'tagName'];
+
+// Set up all inheritable **Backbone.View** properties and methods.
+_.extend(View.prototype, Events, {
+
+  // The default `tagName` of a View's element is `"div"`.
+  tagName: 'div',
+
+  // jQuery delegate for element lookup, scoped to DOM elements within the
+  // current view. This should be prefered to global lookups where possible.
+  $: function(selector) {
+    return this.$el.find(selector);
+  },
+
+  // Initialize is an empty function by default. Override it with your own
+  // initialization logic.
+  initialize: function(){},
+
+  // **render** is the core function that your view should override, in order
+  // to populate its element (`this.el`), with the appropriate HTML. The
+  // convention is for **render** to always return `this`.
+  render: function() {
+    return this;
+  },
+
+  // Clean up references to this view in order to prevent latent effects and
+  // memory leaks.
+  dispose: function() {
+    this.undelegateEvents();
+    if (this.model && this.model.off) this.model.off(null, null, this);
+    if (this.collection && this.collection.off) this.collection.off(null, null, this);
+    return this;
+  },
+
+  // Remove this view from the DOM. Note that the view isn't present in the
+  // DOM by default, so calling this method may be a no-op.
+  remove: function() {
+    this.dispose();
+    this.$el.remove();
+    return this;
+  },
+
+  // For small amounts of DOM Elements, where a full-blown template isn't
+  // needed, use **make** to manufacture elements, one at a time.
+  //
+  //     var el = this.make('li', {'class': 'row'}, this.model.escape('title'));
+  //
+  make: function(tagName, attributes, content) {
+    var el = document.createElement(tagName);
+    if (attributes) $(el).attr(attributes);
+    if (content != null) $(el).html(content);
+    return el;
+  },
+
+  // Change the view's element (`this.el` property), including event
+  // re-delegation.
+  setElement: function(element, delegate) {
+    if (this.$el) this.undelegateEvents();
+    this.$el = element instanceof $ ? element : $(element);
+    this.el = this.$el[0];
+    if (delegate !== false) this.delegateEvents();
+    return this;
+  },
+
+  // Set callbacks, where `this.events` is a hash of
+  //
+  // *{"event selector": "callback"}*
+  //
+  //     {
+  //       'mousedown .title':  'edit',
+  //       'click .button':     'save'
+  //       'click .open':       function(e) { ... }
+  //     }
+  //
+  // pairs. Callbacks will be bound to the view, with `this` set properly.
+  // Uses event delegation for efficiency.
+  // Omitting the selector binds the event to `this.el`.
+  // This only works for delegate-able events: not `focus`, `blur`, and
+  // not `change`, `submit`, and `reset` in Internet Explorer.
+  delegateEvents: function(events) {
+    if (!(events || (events = _.result(this, 'events')))) return;
+    this.undelegateEvents();
+    for (var key in events) {
+      var method = events[key];
+      if (!_.isFunction(method)) method = this[events[key]];
+      if (!method) throw new Error('Method "' + events[key] + '" does not exist');
+      var match = key.match(delegateEventSplitter);
+      var eventName = match[1], selector = match[2];
+      method = _.bind(method, this);
+      eventName += '.delegateEvents' + this.cid;
+      if (selector === '') {
+        this.$el.bind(eventName, method);
+      } else {
+        this.$el.delegate(selector, eventName, method);
+      }
+    }
+  },
+
+  // Clears all callbacks previously bound to the view with `delegateEvents`.
+  // You usually don't need to use this, but may wish to if you have multiple
+  // Backbone views attached to the same DOM element.
+  undelegateEvents: function() {
+    this.$el.unbind('.delegateEvents' + this.cid);
+  },
+
+  // Performs the initial configuration of a View with a set of options.
+  // Keys with special meaning *(model, collection, id, className)*, are
+  // attached directly to the view.
+  _configure: function(options) {
+    if (this.options) options = _.extend({}, this.options, options);
+    for (var i = 0, l = viewOptions.length; i < l; i++) {
+      var attr = viewOptions[i];
+      if (options[attr]) this[attr] = options[attr];
+    }
+    this.options = options;
+  },
+
+  // Ensure that the View has a DOM element to render into.
+  // If `this.el` is a string, pass it through `$()`, take the first
+  // matching element, and re-assign it to `el`. Otherwise, create
+  // an element from the `id`, `className` and `tagName` properties.
+  _ensureElement: function() {
+    if (!this.el) {
+      var attrs = _.extend({}, _.result(this, 'attributes'));
+      if (this.id) attrs.id = _.result(this, 'id');
+      if (this.className) attrs['class'] = _.result(this, 'className');
+      this.setElement(this.make(_.result(this, 'tagName'), attrs), false);
+    } else {
+      this.setElement(_.result(this, 'el'), false);
+    }
+  }
+
+});
+
+
+// Helpers
+// -------
+
+// Helper function to correctly set up the prototype chain, for subclasses.
+// Similar to `goog.inherits`, but uses a hash of prototype properties and
+// class properties to be extended.
+var extend = function(protoProps, staticProps) {
+  var parent = this;
+  var child;
+
+  // The constructor function for the new subclass is either defined by you
+  // (the "constructor" property in your `extend` definition), or defaulted
+  // by us to simply call the parent's constructor.
+  if (protoProps && _.has(protoProps, 'constructor')) {
+    child = protoProps.constructor;
+  } else {
+    child = function(){ parent.apply(this, arguments); };
+  }
+
+  // Add static properties to the constructor function, if supplied.
+  _.extend(child, parent, staticProps);
+
+  // Set the prototype chain to inherit from `parent`, without calling
+  // `parent`'s constructor function.
+  var Surrogate = function(){ this.constructor = child; };
+  Surrogate.prototype = parent.prototype;
+  child.prototype = new Surrogate;
+
+  // Add prototype properties (instance properties) to the subclass,
+  // if supplied.
+  if (protoProps) _.extend(child.prototype, protoProps);
+
+  // Set a convenience property in case the parent's prototype is needed
+  // later.
+  child.__super__ = parent.prototype;
+
+  return child;
+};
+
+module.exports.extend = extend
+
+});
 require.register("component-domify/index.js", function(module, exports, require){
 
 /**
@@ -11257,26 +11585,59 @@ module.exports = View.extend({
 require.register("hero/template.js", function(module, exports, require){
 module.exports = '<div class="grid">\n  <hgroup>\n    <h1></h1>\n    <h2></h2>\n  </hgroup>\n</div>';
 });
-require.register("main/index.js", function(module, exports, require){
-var View = require('backbone-view');
+require.register("main-index/index.js", function(module, exports, require){
+var $ = require('jquery');
 var template = require('./template');
 
-module.exports = View.extend({
-
-  initialize: function (options) {
-    return this;
-  },
-
-  render: function () {
-    return this;
-  },
-
-  events: {}
-
+module.exports = $(template);
 });
+require.register("main-index/template.js", function(module, exports, require){
+module.exports = '<div class="main main-about">\n  <div class="row">\n    <div class="twelve columns">\n      <h2>Computational Visual Design Lab</h2>\n  </div>\n</div>';
 });
-require.register("main/template.js", function(module, exports, require){
-module.exports = '';
+require.register("main-about/index.js", function(module, exports, require){
+var $ = require('jquery');
+var template = require('./template');
+
+module.exports = $(template);
+});
+require.register("main-about/template.js", function(module, exports, require){
+module.exports = '<div class="main main-about">\n  <div class="row">\n    <div class="twelve columns">\n      <h2>About the lab</h2>\n      <ul>\n        <li>Computational Visual Design Lab</li>\n        <li>Università degli Studi RomaTre</li>\n        <li>via della Vasca Navale, 79 (<a href="http://maps.google.com/maps?f=q&source=s_q&hl=it&q=Via+della+Vasca+Navale,+79,+00146+Roma,+Lazio&sll=41.442726,12.392578&sspn=18.457438,31.816406&ie=UTF8&cd=1&geocode=FU-rfgIdIkK-AA&split=0&z=16&iwloc=A">maps</a>)</li>\n        <li>00146 - Roma, Italy</li>\n      </ul>\n    </div>\n  </div>\n</div>';
+});
+require.register("main-people/index.js", function(module, exports, require){
+var $ = require('jquery');
+var template = require('./template');
+
+module.exports = $(template);
+});
+require.register("main-people/template.js", function(module, exports, require){
+module.exports = '<div class="main main-people">\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Members</h3>\n      <ul>\n        <li>Professor Alberto Paoluzzi</li>\n        <li>Researcher <a href="http://onirame.com" target="blank">Enrico Marino</a></li>\n        <li>Researcher <a href="http://federicospini.com" target="blank">Federico Spini</a></li>\n      </ul>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Alumni</h3>\n      <ul>\n      </ul>\n    </div>\n  </div>\n</div>';
+});
+require.register("main-bio/index.js", function(module, exports, require){
+var $ = require('jquery');
+var template = require('./template');
+
+module.exports = $(template);
+});
+require.register("main-bio/template.js", function(module, exports, require){
+module.exports = '<div class="main main-bio">\n  <div class="row">\n    <div class="twelve columns">\n      <dl class="sub-nav">\n        <dt>Biomedical Informatics</dt>\n        <dd><a href="#">Teachers</a></dd>\n        <dd><a href="#">Goals</a></dd>\n        <dd><a href="#">Scheduling</a></dd>\n        <dd><a href="#">Program</a></dd>\n        <dd><a href="#">Materials</a></dd>\n        <dd><a href="#">Tests</a></dd>\n      </dl>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h2>Biomedical Informatics</h2>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Teachers</h3>\n      <ul>\n        <li>Professor Mauro Ceccanti</li>\n        <li>Professor Alberto Paoluzzi</li>\n        <li>Researcher Enrico Marino</li>\n        <li>Researcher Federico Spini</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Goals</h3>\n      <ul>\n        <li>Understand the medical and biological applications of computational science</li>\n        <li>Understand basic concepts about life: DNA, Genetic Code, proteins, biomolecules</li> \n        <li>Understand anatomic modeling and physiologic simulation</li>\n        <li>Elaborate the fundamental types of biomedical data and their organization</li>\n        <li>Develop in a cutting edge graphics environment using JavaScript and webGL</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n  \n  <div class="row">\n    <div class="twelve columns">\n      <h3>Scheduling</h3>\n      <ul>\n        <li>from Thursday, Mar 1, 2012 to Friday, Jun 8, 2012</li>\n        <li>on Monday, Thursday</li>\n        <li>at 09:45, until 11:15</li>\n        <li>in Room N3</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Student evaluation</h3>\n      <ul>\n        <li>Final exam: project discussion</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Program</h3>\n\n      <h4>Introduction to Web programming with JavaScript</h4>\n      <ul>\n        <li>Introduction to collaborative development: social coding with git and GitHub</li>\n        <li>Basic JavaScript: Syntax, Operators, Statements, Functions, Objects</li>\n        <li>Advanced JavaScript: Closures, Prototype, Inheritance</li>\n      </ul>\n\n      <h4>Biomolecules and life</h4>\n      <ul>\n        <li>Outline of genomics: DNA and genetic code, RNA, mapping of genes and proteins</li>\n        <li>Outline of proteomics: primary, secondary, tertiary and quaternary structures</li>\n        <li>Biochemical pathways: nervous system, neurons, neuro-muscular interface</li>\n      </ul>\n\n      <h4>Biomedical records, data and images</h4>\n      <ul>\n        <li>Electronic Medical Record (EMR) environments</li>\n        <li>Laboratory data, anatomic data, biomedical imaging, PACS systems, DICOM images</li>\n        <li>PDB (Protein Data Bank), European Bioinformatics Institute (EBI) services</li>\n      </ul>\n\n      <h4>Symbolic biomedical knowledge</h4>\n      <ul>\n        <li>Web 3.0. Ontologies for organizing biomedical data</li>\n        <li>The University of Washington FMA (Foundational Model of Anatomy) anatomic model</li>\n      </ul>\n\n      <h4>Biomedical modeling and simulation</h4>\n      <ul>\n        <li>Physiological models</li>\n        <li>Virtual Physiological Human: geometric models of proteins, cells, tissues and systems</li>\n        <li>Geometric models of neurons, axons and dendrites, neuro-muscular interface</li>\n      </ul>\n\n      <h4>Student projects</h4>\n      <ul>\n        <li>Design and implementation of interactive web tools for biomedical infographics</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Teaching materials</h3>\n      <ul>\n        <li>Lecture notes, examples, and exercises.</li>\n        <li>I. J. Kalet, <a href="http://www.elsevier.com/wps/find/bookdescription.cws_home/715506/description#description" target="blank">\n          Principles of Biomedical Informatics</a>, Elsevier, 2009</li>\n        <li>E. Marino, F. Spini, <a href="https://github.com/cvdlab/javascript-crumbs/blob/master/chapters/Readme.md" target="blank">JavaScript crumbs for beginners</a>, 2012</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Projects</h3>\n      <ul>\n        <li>\n          <a href="https://github.com/cvdlab-bio/web3d" target="blank">Web3D</a>\n          - Web 3d medical image definition\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab-bio/webanim" target="blank">WebAnim</a>\n          - Web Animation and Movie generator\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab-bio/webmol" target="blank">WebMol</a>\n          - Web Protein Viewer\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab-bio/webpdb" target="blank">WebPDB</a> \n          - Web Protein Data Bank\n        </li>\n      </ul>\n    </div>\n  </div>\n</div>';
+});
+require.register("main-cg/index.js", function(module, exports, require){
+var $ = require('jquery');
+var template = require('./template');
+
+module.exports = $(template);
+});
+require.register("main-cg/template.js", function(module, exports, require){
+module.exports = '<div class="main main-cg">\n  <div class="row">\n    <div class="twelve columns">\n      <dl class="sub-nav">\n        <dt>Computational Graphics</dt>\n        <dd><a href="#">Teachers</a></dd>\n        <dd><a href="#">Goals</a></dd>\n        <dd><a href="#">Scheduling</a></dd>\n        <dd><a href="#">Program</a></dd>\n        <dd><a href="#">Materials</a></dd>\n        <dd><a href="#">Tests</a></dd>\n      </dl>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h2>Computational Graphics</h2>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Teachers</h3>\n      <ul>\n        <li>Professor Alberto Paoluzzi</li>\n        <li>Researcher Enrico Marino</li>\n        <li>Researcher Federico Spini</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Goals</h3>\n      <ul>\n        <li>produce geometric models of highly complex components and structures</li>\n        <li>understand the design and development of computer-aided modeling and simulation</li>\n        <li>understand and apply basic and advanced computer graphics techniques</li>\n        <li>understand computer rendering, geometric computing and scientific visualization</li>\n        <li>develop in a cutting edge graphics environment using JavaScript and webGL</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Scheduling</h3>\n      <ul>\n        <li>from Thursday, Mar 1, 2012 to Friday, Jun 8, 2012</li>\n        <li>on Monday, Tuesday, Thursday, Friday</li>\n        <li>at 15:45, until 17:15</li>\n        <li>in Room N3</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Program</h3>\n\n      <h4>Introduction to Web programming with JavaScript</h4>\n      <ul>\n        <li>Introduction to collaborative development: social coding with git and GitHub</li>\n        <li>Basic JavaScript: Syntax, Operators, Statements, Functions, Objects</li>\n        <li>Advanced JavaScript: Closures, Prototype, Inheritance</li>\n      </ul>\n\n      <h4>Polyhedral geometry</h4>\n      <ul>\n        <li>Linear and affine spaces: convex sets, affine coordinates, cones, polyhedra</li>\n        <li>Cellular complexes: polytopal, simplicial and cuboidal complexes</li>\n        <li>Convex hull, Dealunay triangulations, Voronoi complexes</li>\n      </ul>\n\n      <h4>Geometric programming</h4>\n      <ul>\n        <li>Introduction to PLaSM (Programming Language for Solid Modeling) and Plasm.js</li>\n        <li>First geometric constructions, Affine transformations</li>\n        <li>Basic computer graphics: graphical primitives, hierarchical structures, scene graphs</li>\n      </ul>\n\n      <hr/>\n\n      <h4>Introduction to Geometric Computing</h4>\n      <ul>\n        <li>Parametric representations of Curves, Surfaces, Solids</li>\n        <li>Rational and polynomial maps, tensor product patches, transfinite methods</li>\n      </ul>\n\n      <h4>Graphics rendering</h4>\n      <ul>\n        <li>2D and 3D pipelines, projections, 3D reconstruction</li>\n        <li>Advanced techinique: shading, texture mapping, materials and illumination models</li>\n      </ul>\n\n      <h4>WebGL programming</h4>\n      <ul>\n        <li>WebGL frameworks, buffers, array data, uniform and attribute variables</li>\n        <li>Shaders, textures, lighting, blending, advanced effects</li>\n      </ul>\n\n      <h4>Student projects</h4>\n      <ul>\n        <li>Design and implement a project in the area of biomedical infographics</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Teaching Materials</h3>\n      <ul>\n        <li>Lecture notes, Example, Exercises</li>\n        <li>A. Paoluzzi, <a href="http://onlinelibrary.wiley.com/book/10.1002/0470013885">\n          Geometric Programming for Computer-Aided Design</a>, Wiley, 2003</li>\n        <li>E. Marino, F. Spini, <a href="https://github.com/cvdlab/javascript-crumbs/blob/master/chapters/Readme.md">JavaScript crumbs for beginners</a>, 2012</li>\n      </ul>\n      <hr/>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h3>Tests</h3>\n      <ul>\n        <li><a href="https://github.com/cvdlab-cg/homework1">Test 1: Wed, Apr 4, 2012</a></li>\n        <li><a href="https://github.com/cvdlab-cg/homework2">Test 2: Sat, May 5, 2012</a></li>\n        <li>Project deadline: Fri, Jun 8, 2012</li>\n        <li>Project discussion: TBD</li>\n      </ul>\n    </div>\n  </div>\n</div>';
+});
+require.register("main-projects/index.js", function(module, exports, require){
+var $ = require('jquery');
+var template = require('./template');
+
+module.exports = $(template);
+});
+require.register("main-projects/template.js", function(module, exports, require){
+module.exports = '<div class="main main-projects">\n  <div class="row">\n    <div class="twelve columns">\n      <h2>Projects</h2>\n    </div>\n  </div>\n\n  <div class="row">\n    <div class="twelve columns">\n      <h4>Libraries</h4>\n      <ul>\n        <li>\n          <a href="https://github.com/cvdlab/plasm.js" target="blank">plasm</a>\n          - JavaScript Programming Language for Solid Modeling\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/plasm-fun" target="blank">plasm-fun</a>\n          - JavaScript Functional Programming Language for Solid Modeling\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/plasm-boilerplate" target="blank">plasm-boilerplate</a>\n          - JavaScript PLaSM getting started repository\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/simplexn" target="blank">simplexn</a>\n          JavaScript dimension-independent geometric kernel based on simplical complex\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/lar" target="blank">lar</a>\n          - JavaScript Linear Algebra Representation framework\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/f" target="blank">f</a>\n          - JavaScript functional library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector2" target="blank">vector2</a>\n          - JavaScript 2d vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector3" target="blank">vector3</a>\n          - JavaScript 3d vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector4" target="blank">vector4</a>\n          - JavaScript 4d vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vectorn" target="blank">vectorn</a>\n          - JavaScript dimension-independet vector library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/matrix2" target="blank">matrix2</a>\n          - JavaScript 2d matrix library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/matrix3" target="blank">matrix3</a>\n          - JavaScript 3d matrix library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/matrix4" target="blank">matrix4</a>\n          - JavaScript 4d matrix library\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/vector2" target="blank">matrixn</a>\n          - JavaScript dimension-independet matrix library\n        </li>\n      <ul>\n\n      <h4>Handbooks</h4>\n      <ul>\n        <li>\n          <a href="https://github.com/cvdlab/javascript-crumbs" target="blank">javascript-crumbs</a>\n          - JavaScript crumbs\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/git-crumbs" target="blank">git-crumbs</a>\n          - git crumbs</li>\n        <li>\n          <a href="https://github.com/cvdlab/html5-crumbs" target="blank">html5-crumbs</a>\n          - HTML5 crumbs</li>\n        <li>\n          <a href="https://github.com/cvdlab/webgl-crumbs" target="blank">webgl-crumbs</a>\n          - WebGL crumbs\n        </li>\n        <li>\n          <a href="https://github.com/cvdlab/plasm-crumbs" target="blank">plasm-crumbs</a>\n          - PLaSM crumbs\n        </li>\n      </ul>\n    </div>\n  </div>\n</div>';
 });
 require.register("copyright/index.js", function(module, exports, require){
 var View = require('backbone-view');
@@ -11300,33 +11661,145 @@ require.register("copyright/template.js", function(module, exports, require){
 module.exports = '';
 });
 require.register("app/index.js", function(module, exports, require){
-// var $ = require('jquery');
-// var Home = require('view-home');
-
-// var views = {
-//   home: new Home({el: $('#home')})
-// };
-
-
-// views.home.render();
-
-// exports = {
-//   views: views
-// };
-
-
 var Navbar = require('navbar');
 var Hero = require('hero');
-var navbar = new Navbar();
-var hero = new Hero();
-document.body.appendChild(navbar.el);
-document.body.appendChild(hero.el);
-hero.render({
-  title: 'CVDLAB', 
-  subtitle: 'Computational Visual Design Lab'
+var main_index = require('main-index');
+var main_about = require('main-about');
+var main_people = require('main-people');
+var main_bio = require('main-bio');
+var main_cg = require('main-cg');
+var main_projects = require('main-projects');
+var Copyright = require('copyright');
+var Router = require('backbone-router');
+
+module.exports = Router.extend({
+
+  initialize: function() {
+    var anchors = {
+      navbar: $('#navbar'),
+      hero: $('#hero'),
+      main: $('#main'),
+    };
+
+    var views = {
+      navbar: new Navbar(),
+      hero: new Hero(),
+      main_index: main_index,
+      main_about: main_about,
+      main_people: main_people,
+      main_bio: main_bio,
+      main_cg: main_cd,
+      main_projects: main_projects,
+      copiright: new Copyright(),
+    };
+
+    anchors.navbar.after(navbar.el);
+    anchors.hero.after(hero.el);
+    anchors.copiright.after(copiright.el);
+
+    this.views = views;
+    this.anchors = anchors;
+    this.history = Router.history;
+    this.history.start(/*{pushState: true}*/);
+  },
+
+  routes: {
+    '': 'index',
+    'about': 'about',
+    'people': 'people',
+    'teaching/bio': 'bio',
+    'teaching/cg': 'cg',
+    'projects': 'projects'
+
+  },
+
+    render: function(main_page, hero_model) {
+      var views = views;
+      var anchor_main = this.anchors.main;
+
+      views.hero.render(hero_model);
+      anchors_main.find('.main').hide();
+      views[main_page].show();
+    },
+
+    index: function() {
+      var main_page = 'main_index';
+      var hero_model = {
+        title: 'CVDLAB',
+        subtitle: 'Computational Visual Design Laboratory'
+      };
+
+      this.render(main_page, hero_model);
+    },
+
+    about: function() {
+      var main_page = 'main_about';
+      var hero_model = {
+        title: 'About',
+        subtitle: ' '
+      };
+
+      this.render(main_page, hero_model);
+    },
+
+    people: function() {
+      var main_page = 'main_people';
+      var hero_model = {
+        title: 'People',
+        subtitle: ' '
+      };
+
+      this.render(main_page, hero_model);
+    },
+
+    bio: function() {
+      var main_page = 'main_bio';
+      var hero_model = {
+        title: 'Teaching',
+        subtitle: 'Biomedical Informatics'
+      };
+
+      this.render(main_page, hero_model);
+    },
+
+    cg: function() {
+      var main_page = 'main_cg';
+      var hero_model = {
+        title: 'Teaching',
+        subtitle: 'Computational Graphics'
+      };
+
+      this.render(main_page, hero_model);
+    },
+
+    projects: function() {
+      var main_page = 'main_projects';
+      var hero_model = {
+        title: 'Projects',
+        subtitle: ' '
+      };
+
+      this.render(main_page, hero_model);
+    }
 });
 });
 require.alias("app/index.js", "CVDLAB/deps/app/index.js");
+require.alias("component-jquery/index.js", "app/deps/jquery/index.js");
+
+require.alias("spini-backbone-router/index.js", "app/deps/backbone-router/index.js");
+require.alias("component-underscore/index.js", "spini-backbone-router/deps/underscore/index.js");
+
+require.alias("timoxley-backbone-events/index.js", "spini-backbone-router/deps/backbone-events/index.js");
+require.alias("component-object/index.js", "timoxley-backbone-events/deps/object/index.js");
+
+require.alias("spini-backbone-history/index.js", "spini-backbone-router/deps/backbone-history/index.js");
+require.alias("component-underscore/index.js", "spini-backbone-history/deps/underscore/index.js");
+
+require.alias("component-jquery/index.js", "spini-backbone-history/deps/jquery/index.js");
+
+require.alias("timoxley-backbone-events/index.js", "spini-backbone-history/deps/backbone-events/index.js");
+require.alias("component-object/index.js", "timoxley-backbone-events/deps/object/index.js");
+
 require.alias("navbar/index.js", "app/deps/navbar/index.js");
 require.alias("navbar/template.js", "app/deps/navbar/template.js");
 require.alias("timoxley-backbone-view/index.js", "navbar/deps/backbone-view/index.js");
@@ -11354,15 +11827,29 @@ require.alias("component-jquery/index.js", "timoxley-backbone-view/deps/jquery/i
 require.alias("timoxley-backbone-events/index.js", "timoxley-backbone-view/deps/backbone-events/index.js");
 require.alias("component-object/index.js", "timoxley-backbone-events/deps/object/index.js");
 
-require.alias("main/index.js", "app/deps/main/index.js");
-require.alias("main/template.js", "app/deps/main/template.js");
-require.alias("timoxley-backbone-view/index.js", "main/deps/backbone-view/index.js");
-require.alias("component-underscore/index.js", "timoxley-backbone-view/deps/underscore/index.js");
+require.alias("main-index/index.js", "app/deps/main-index/index.js");
+require.alias("main-index/template.js", "app/deps/main-index/template.js");
+require.alias("component-jquery/index.js", "main-index/deps/jquery/index.js");
 
-require.alias("component-jquery/index.js", "timoxley-backbone-view/deps/jquery/index.js");
+require.alias("main-about/index.js", "app/deps/main-about/index.js");
+require.alias("main-about/template.js", "app/deps/main-about/template.js");
+require.alias("component-jquery/index.js", "main-about/deps/jquery/index.js");
 
-require.alias("timoxley-backbone-events/index.js", "timoxley-backbone-view/deps/backbone-events/index.js");
-require.alias("component-object/index.js", "timoxley-backbone-events/deps/object/index.js");
+require.alias("main-people/index.js", "app/deps/main-people/index.js");
+require.alias("main-people/template.js", "app/deps/main-people/template.js");
+require.alias("component-jquery/index.js", "main-people/deps/jquery/index.js");
+
+require.alias("main-bio/index.js", "app/deps/course-bio/index.js");
+require.alias("main-bio/template.js", "app/deps/course-bio/template.js");
+require.alias("component-jquery/index.js", "main-bio/deps/jquery/index.js");
+
+require.alias("main-cg/index.js", "app/deps/main-cg/index.js");
+require.alias("main-cg/template.js", "app/deps/main-cg/template.js");
+require.alias("component-jquery/index.js", "main-cg/deps/jquery/index.js");
+
+require.alias("main-projects/index.js", "app/deps/main-projects/index.js");
+require.alias("main-projects/template.js", "app/deps/main-projects/template.js");
+require.alias("component-jquery/index.js", "main-projects/deps/jquery/index.js");
 
 require.alias("copyright/index.js", "app/deps/copyright/index.js");
 require.alias("copyright/template.js", "app/deps/copyright/template.js");

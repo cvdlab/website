@@ -1,11 +1,11 @@
 var Navbar = require('navbar');
 var Hero = require('hero');
-var MainIndex = require('main-index');
-var MainAbout = require('main-about');
-var MainPeople = require('main-people');
-var MainBio = require('main-bio');
-var MainCG = require('main-cg');
-var MainProjects = require('main-projects');
+var main_index = require('main-index');
+var main_about = require('main-about');
+var main_people = require('main-people');
+var main_bio = require('main-bio');
+var main_cg = require('main-cg');
+var main_projects = require('main-projects');
 var Copyright = require('copyright');
 var Router = require('backbone-router');
 
@@ -21,12 +21,12 @@ module.exports = Router.extend({
     var views = {
       navbar: new Navbar(),
       hero: new Hero(),
-      main_index: new MainIndex(),
-      main_about: new MainAbout(),
-      main_people: new MainPeople(),
-      main_bio: new MainBio(),
-      main_cg: new MainCG(),
-      main_projects: new MainProjects(),
+      main_index: main_index,
+      main_about: main_about,
+      main_people: main_people,
+      main_bio: main_bio,
+      main_cg: main_cd,
+      main_projects: main_projects,
       copiright: new Copyright(),
     };
 

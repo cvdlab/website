@@ -14,7 +14,12 @@
   "local": [
     "navbar",
     "hero",
-    "main",
+    "main-index",
+    "main-about",
+    "main-people",
+    "main-bio",
+    "main-cg",
+    "main-projects",
     "copyright"
   ]
 }
