@@ -2,7 +2,7 @@ div.hero {
   padding-top: 60px;
   width: 100%;
   height: 300px;
-  background: url('images/grid.png');
+  background: url('./images/grid.png');
 }
 
 div.hero h1 {
