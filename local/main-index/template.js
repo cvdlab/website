@@ -1,1 +1,0 @@
-module.exports = '<div class="main main-index">\n  <div class="row">\n    <div class="twelve columns">\n      <h2>Computational Visual Design Lab</h2>\n  </div>\n</div>';

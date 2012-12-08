@@ -1,1 +1,0 @@
-module.exports = '<div class="grid">\n  <hgroup>\n    <h1></h1>\n    <h2></h2>\n  </hgroup>\n</div>';
