@@ -1,13 +1,5 @@
 div.hero {
   padding-top: 60px;
   width: 100%;
-  height: 300px;
-}
-
-div.hero h1 {
-  font-size: 24px;
-}
-
-div.hero h2 {
-  font-size: 18px;
+  height: 200px;
 }
